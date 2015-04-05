@@ -38,6 +38,10 @@ ifneq (,$(filter rpl,$(USEMODULE)))
     USEMODULE_INCLUDES += $(RIOTBASE)/sys/net/include
     USEMODULE_INCLUDES += $(RIOTBASE)/sys/net/routing/rpl
 endif
+ifneq (,$(filter nhdp,$(USEMODULE)))
+    USEMODULE_INCLUDES += $(RIOTBASE)/sys/net/include
+    USEMODULE_INCLUDES += $(RIOTBASE)/sys/net/routing/nhdp
+endif
 ifneq (,$(filter ieee802154,$(USEMODULE)))
     USEMODULE_INCLUDES += $(RIOTBASE)/sys/net/include
 endif
@@ -68,6 +72,10 @@ endif
 
 ifneq (,$(filter oneway_malloc,$(USEMODULE)))
     USEMODULE_INCLUDES += $(RIOTBASE)/sys/oneway-malloc/include
+endif
+
+ifneq (,$(filter fib,$(USEMODULE)))
+    USEMODULE_INCLUDES += $(RIOTBASE)/sys/include/net
 endif
 
 ifneq (,$(filter embunit,$(USEMODULE)))

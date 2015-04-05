@@ -85,43 +85,50 @@ void _pinblock_set_func(pinblock_t config) {
     uint8_t pin = _PIN(config);
     uint32_t func = config.function;
     uint32_t mask = 0b11;
-    uint32_t reg = &LPC_PINSEL.SEL0;
-
-    switch (block) {
-    case 0:
-        if (pin > 15) {
-            reg = &LPC_PINSEL.SEL1;
-            pin = pin % 16;
-        }
-        break;
-    case 1:
-        if (pin > 15) {
-            reg = &LPC_PINSEL.SEL3;
-            pin = pin % 16;
-        }
-        else {
-            reg = &LPC_PINSEL.SEL2;
-        }
-        break;
-    case 2:
-        reg = &LPC_PINSEL.SEL4;
-        break;
-    case 3:
-        reg = &LPC_PINSEL.SEL7;
-        break;
-    case 4:
-        reg = &LPC_PINSEL.SEL9;
-        break;
-    case 5:
-        reg = &LPC_PINSEL.SEL10;
-        break;
-    }
 
     func = func << (pin * 2);
     mask = mask << (pin * 2);
 
-    reg &= ~mask;
-    reg = func;
+    switch (block) {
+    case 0:
+        if (pin > 15) {
+            pin = pin % 16;
+            func = func << (pin * 2);
+            mask = mask << (pin * 2);
+            LPC_PINSEL.SEL1 &= ~mask;
+            LPC_PINSEL.SEL1 = func;
+        }
+        break;
+    case 1:
+        if (pin > 15) {
+            pin = pin % 16;
+            func = func << (pin * 2);
+            mask = mask << (pin * 2);
+            LPC_PINSEL.SEL3 &= ~mask;
+            LPC_PINSEL.SEL3 = func;
+        }
+        else {
+            LPC_PINSEL.SEL2 &= ~mask;
+            LPC_PINSEL.SEL2 = func;
+        }
+        break;
+    case 2:
+        LPC_PINSEL.SEL4 &= ~mask;
+        LPC_PINSEL.SEL4 = func;
+        break;
+    case 3:
+        LPC_PINSEL.SEL7 &= ~mask;
+        LPC_PINSEL.SEL7 = func;
+        break;
+    case 4:
+        LPC_PINSEL.SEL9 &= ~mask;
+        LPC_PINSEL.SEL9 = func;
+        break;
+    case 5:
+        LPC_PINSEL.SEL10 &= ~mask;
+        LPC_PINSEL.SEL10 = func;
+        break;
+    }
 }
 
 void _pinblock_set_mode(pinblock_t config) {
@@ -129,40 +136,46 @@ void _pinblock_set_mode(pinblock_t config) {
     uint8_t pin = _PIN(config);
     uint32_t mode = config.mode;
     uint32_t mask = 0b11;
-    uint32_t reg = &LPC_PINMODE.MODE0;
-
-    switch (block) {
-    case 0:
-        if (pin > 15) {
-            reg = &LPC_PINMODE.MODE1;
-            pin = pin % 16;
-        }
-        break;
-    case 1:
-        if (pin > 15) {
-            reg = &LPC_PINMODE.MODE3;
-            pin = pin % 16;
-        }
-        else {
-            reg = &LPC_PINMODE.MODE2;
-        }
-        break;
-    case 2:
-        reg = &LPC_PINMODE.MODE4;
-        break;
-    case 3:
-        reg = &LPC_PINMODE.MODE7;
-        break;
-    case 4:
-        reg = &LPC_PINMODE.MODE9;
-        break;
-    }
 
     mode = mode << (pin * 2);
     mask = mask << (pin * 2);
 
-    reg &= ~mask;
-    reg = mode;
+    switch (block) {
+    case 0:
+        if (pin > 15) {
+            pin = pin % 16;
+            mode = mode << (pin * 2);
+            mask = mask << (pin * 2);
+            LPC_PINMODE.MODE1 &= ~mask;
+            LPC_PINMODE.MODE1 = mode;
+        }
+        break;
+    case 1:
+        if (pin > 15) {
+            pin = pin % 16;
+            mode = mode << (pin * 2);
+            mask = mask << (pin * 2);
+            LPC_PINMODE.MODE3 &= ~mask;
+            LPC_PINMODE.MODE3 = mode;
+        }
+        else {
+            LPC_PINMODE.MODE2 &= ~mask;
+            LPC_PINMODE.MODE2 = mode;
+        }
+        break;
+    case 2:
+        LPC_PINMODE.MODE4 &= ~mask;
+        LPC_PINMODE.MODE4 = mode;
+        break;
+    case 3:
+        LPC_PINMODE.MODE7 &= ~mask;
+        LPC_PINMODE.MODE7 = mode;
+        break;
+    case 4:
+        LPC_PINMODE.MODE9 &= ~mask;
+        LPC_PINMODE.MODE9 = mode;
+        break;
+    }
 }
 
 void _pinblock_set_mode_od(pinblock_t config) {
@@ -170,11 +183,10 @@ void _pinblock_set_mode_od(pinblock_t config) {
     uint8_t pin = _PIN(config);
     uint32_t od = config.opendrain;
     uint32_t mask = 0b1;
-    uint32_t reg = &LPC_PINMODEOD.OD[block];
 
     od = od << pin;
     mask = mask << pin;
 
-    reg &= ~mask;
-    reg = od;
+    LPC_PINMODEOD.OD[block] &= ~mask;
+    LPC_PINMODEOD.OD[block] = od;
 }

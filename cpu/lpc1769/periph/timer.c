@@ -88,7 +88,7 @@
 
 #define PTIMER_ISR_DECL(X)                      \
 void isr_timer ## X(void) {                 \
-    int chan;                                   \
+    int chan = 0;                                   \
     if (timers[X].base->IR.MR0) {               \
         timers[X].base->IR.MR0 = 1;             \
         timers[X].base->MCR.MR0I = 0;           \
@@ -109,7 +109,7 @@ void isr_timer ## X(void) {                 \
         timers[X].base->MCR.MR3I = 0;           \
         chan = 3;                               \
     }                                           \
-    NVIC_ClearPendingIRQ(TIMER ## X ## _IRQn);  \
+    NVIC_ClearPendingIRQ(TIMER ## X ##_IRQn);  \
     timers[X].callback(chan);                   \
 }
 
@@ -319,6 +319,7 @@ void timer_irq_disable(tim_t dev) {
     case TIMER_3:
         NVIC_DisableIRQ(TIMER3_IRQn);
         break;
+    default:break;
     }
 }
 

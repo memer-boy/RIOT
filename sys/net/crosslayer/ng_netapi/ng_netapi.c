@@ -39,41 +39,51 @@ static inline int _get_set(kernel_pid_t pid, uint16_t type,
 {
     msg_t cmd;
     msg_t ack;
-    ng_netapi_opt_t opt;
+    ng_netapi_opt_t o;
     /* set ńetapi's option struct */
-    opt.type = opt;
-    opt.context = context;
-    opt.data = data;
-    opt.data_len = data_len;
+    o.opt = opt;
+    o.context = context;
+    o.data = data;
+    o.data_len = data_len;
     /* set outgoing message's fields */
     cmd.type = type;
-    cmd.content.ptr = (void *)&opt;
+    cmd.content.ptr = (void *)&o;
     /* trigger the netapi */
     msg_send_receive(&cmd, &ack, pid);
     /* return the ACK message's value */
     return (int)ack.content.value;
 }
 
-int ng_netapi_send(kernel_pid_t pid, ng_pktsnip_t *pkt)
+static inline int _snd_rcv(kernel_pid_t pid, uint16_t type, ng_pktsnip_t *pkt)
 {
     msg_t msg;
     /* set the outgoing message's fields */
-    msg.type = NETAPI_MSG_TYPE_SND;
+    msg.type = type;
     msg.content.ptr = (void *)pkt;
-    /* send data using netapi */
+    /* send message */
     return msg_send(&msg, pid);
+}
+
+int ng_netapi_send(kernel_pid_t pid, ng_pktsnip_t *pkt)
+{
+    return _snd_rcv(pid, NG_NETAPI_MSG_TYPE_SND, pkt);
+}
+
+int ng_netapi_receive(kernel_pid_t pid, ng_pktsnip_t *pkt)
+{
+    return _snd_rcv(pid, NG_NETAPI_MSG_TYPE_RCV, pkt);
 }
 
 int ng_netapi_get(kernel_pid_t pid, ng_netconf_opt_t opt, uint16_t context,
                   void *data, size_t data_len)
 {
-    return _get_set(pid, NG_NETAPI_MSG_TYPE_GETOPT, opt, context,
+    return _get_set(pid, NG_NETAPI_MSG_TYPE_GET, opt, context,
                     data, data_len);
 }
 
 int ng_netapi_set(kernel_pid_t pid, ng_netconf_opt_t opt, uint16_t context,
                   void *data, size_t data_len)
 {
-    return _get_set(pid, NG_NETAPI_MSG_TYPE_SETOPT, opt, context,
+    return _get_set(pid, NG_NETAPI_MSG_TYPE_SET, opt, context,
                     data, data_len);
 }
