@@ -11,97 +11,83 @@
  * directory for more details.
  */
 
+#include "periph/timer.h"
 #include "core_cm3.h"
 #include "cpuvars.h"
 #include "periph_conf.h"
-#include "periph/timer.h"
+#include "board.h"
 
 #ifdef TIMER_0_EN
 #if TIMER_0_CCLK == 8
-#define TIMER_0_US_CONSTANT (0x0F)
 #define TIMER_0_CCLKSEL     (0b11)
 #elif TIMER_0_CCLK == 4
-#define TIMER_0_US_CONSTANT (0x1E)
 #define TIMER_0_CCLKSEL     (0b00)
 #elif TIMER_0_CCLK == 2
-#define TIMER_0_US_CONSTANT (0x3C)
 #define TIMER_0_CCLKSEL     (0b10)
 #elif TIMER_0_CCLK == 1
-#define TIMER_0_US_CONSTANT (0x78)
 #define TIMER_0_CCLKSEL     (0b01)
+#else
+#error TIMER_0_CCLK devider has an invalid value or is not defined in periph_conf.h
 #endif
 
-#ifndef TIMER_0_US_CONSTANT
-#error TIMER_0_CCLK devider not defined in periph_conf.h
-#endif
+#define TIMER_0_US_CONSTANT ((F_CPU/TIMER_0_CCLK)/1000000UL)
 
 #endif
 
 #ifdef TIMER_1_EN
 #if TIMER_1_CCLK == 8
-#define TIMER_1_US_CONSTANT (0x0F)
 #define TIMER_1_CCLKSEL     (0b11)
 #elif TIMER_1_CCLK == 4
-#define TIMER_1_US_CONSTANT (0x1E)
 #define TIMER_1_CCLKSEL     (0b00)
 #elif TIMER_1_CCLK == 2
-#define TIMER_1_US_CONSTANT (0x3C)
 #define TIMER_1_CCLKSEL     (0b10)
 #elif TIMER_1_CCLK == 1
-#define TIMER_1_US_CONSTANT (0x78)
 #define TIMER_1_CCLKSEL     (0b01)
+#else
+#error TIMER_1_CCLK devider has an invalid value or is not defined in periph_conf.h
 #endif
 
-#ifndef TIMER_1_US_CONSTANT
-#error TIMER_1_CCLK devider not defined in periph_conf.h
-#endif
+#define TIMER_1_US_CONSTANT ((F_CPU/TIMER_1_CCLK)/1000000UL)
 
 #endif
 
 #ifdef TIMER_2_EN
 #if TIMER_2_CCLK == 8
-#define TIMER_2_US_CONSTANT (0x0F)
 #define TIMER_2_CCLKSEL     (0b11)
 #elif TIMER_2_CCLK == 4
-#define TIMER_2_US_CONSTANT (0x1E)
 #define TIMER_2_CCLKSEL     (0b00)
 #elif TIMER_2_CCLK == 2
-#define TIMER_2_US_CONSTANT (0x3C)
 #define TIMER_2_CCLKSEL     (0b10)
 #elif TIMER_2_CCLK == 1
-#define TIMER_2_US_CONSTANT (0x78)
 #define TIMER_2_CCLKSEL     (0b01)
+#else
+#error TIMER_2_CCLK devider has an invalid value or is not defined in periph_conf.h
 #endif
 
-#ifndef TIMER_2_US_CONSTANT
-#error TIMER_2_CCLK devider not defined in periph_conf.h
-#endif
+#define TIMER_2_US_CONSTANT ((F_CPU/TIMER_2_CCLK)/1000000UL)
 
 #endif
 
 #ifdef TIMER_3_EN
+
 #if TIMER_3_CCLK == 8
-#define TIMER_3_US_CONSTANT (0x0F)
 #define TIMER_3_CCLKSEL     (0b11)
 #elif TIMER_3_CCLK == 4
-#define TIMER_3_US_CONSTANT (0x1E)
 #define TIMER_3_CCLKSEL     (0b00)
 #elif TIMER_3_CCLK == 2
-#define TIMER_3_US_CONSTANT (0x3C)
 #define TIMER_3_CCLKSEL     (0b10)
 #elif TIMER_3_CCLK == 1
-#define TIMER_3_US_CONSTANT (0x78)
 #define TIMER_3_CCLKSEL     (0b01)
+#else
+#error TIMER_3_CCLK devider has an invalid value or is not defined in periph_conf.h
 #endif
 
-#ifndef TIMER_3_US_CONSTANT
-#error TIMER_3_CCLK devider not defined in periph_conf.h
-#endif
+#define TIMER_3_US_CONSTANT ((F_CPU/TIMER_3_CCLK)/1000000UL)
 
 #endif
 
 #define PTIMER_ISR_DECL(X)                      \
-void isr_timer ## X ## (void) {                 \
+void isr_timer ## X(void) {                 \
     int chan;                                   \
     if (timers[X].base->IR.MR0) {               \
         timers[X].base->IR.MR0 = 1;             \
@@ -125,16 +111,22 @@ void isr_timer ## X ## (void) {                 \
     }                                           \
     NVIC_ClearPendingIRQ(TIMER ## X ## _IRQn);  \
     timers[X].callback(chan);                   \
-}                                               \
+}
 
 #if defined(TIMER_0_EN) || defined(TIMER_1_EN) || defined(TIMER_2_EN) || defined(TIMER_3_EN)
 
 struct ptimer {
-    timer_t *base;
+    lpc_timer_t *base;
     void (*callback)(int);
 };
 
-const struct ptimer timers[TIMER_NUMOF];
+struct ptimer timers[4] = {
+    {&LPC_TMR0},
+    {&LPC_TMR1},
+    {&LPC_TMR2},
+    {&LPC_TMR3},
+};
+
 const uint8_t current = 0;
 
 int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
@@ -146,7 +138,7 @@ int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
     switch (dev) {
 #ifdef TIMER_0_EN
     case TIMER_0:
-        timers[dev].base = &LPC_TMR0;
+        //        timers[dev].base = &LPC_TMR0;
         LPC_SYS_CTL.PCONP.PCTIM0 = 1;
 
         LPC_SYS_CTL.PCLKSEL0.PCLK_TIMER0 = TIMER_0_CCLKSEL;
@@ -161,7 +153,7 @@ int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
 #endif
 #ifdef TIMER_1_EN
     case TIMER_1:
-        timers[dev].base = &LPC_TMR1;
+        //        timers[dev].base = &LPC_TMR1;
         LPC_SYS_CTL.PCONP.PCTIM1 = 1;
 
         LPC_SYS_CTL.PCLKSEL0.PCLK_TIMER1 = TIMER_1_CCLKSEL;
@@ -176,7 +168,7 @@ int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
 #endif
 #ifdef TIMER_2_EN
     case TIMER_2:
-        timers[dev].base = &LPC_TMR2;
+        //        timers[dev].base = &LPC_TMR2;
         LPC_SYS_CTL.PCONP.PCTIM2 = 1;
 
         LPC_SYS_CTL.PCLKSEL1.PCLK_TIMER2 = TIMER_2_CCLKSEL;
@@ -191,7 +183,7 @@ int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
 #endif
 #ifdef TIMER_3_EN
     case TIMER_3:
-        timers[dev].base = &LPC_TMR3;
+        //        timers[dev].base = &LPC_TMR3;
         LPC_SYS_CTL.PCONP.PCTIM3 = 1;
 
         LPC_SYS_CTL.PCLKSEL1.PCLK_TIMER3 = TIMER_3_CCLKSEL;
@@ -233,6 +225,8 @@ int timer_set(tim_t dev, int channel, unsigned int timeout) {
         timers[dev].base->MCR.MR3I = 1;
         break;
     }
+
+    return 1;
 }
 
 int timer_set_absolute(tim_t dev, int channel, unsigned int value) {
@@ -254,6 +248,8 @@ int timer_set_absolute(tim_t dev, int channel, unsigned int value) {
         timers[dev].base->MCR.MR3I = 1;
         break;
     }
+
+    return 1;
 }
 
 int timer_clear(tim_t dev, int channel) {
@@ -275,10 +271,12 @@ int timer_clear(tim_t dev, int channel) {
         timers[dev].base->MCR.MR3I = 0;
         break;
     }
+
+    return 1;
 }
 
 unsigned int timer_read(tim_t dev) {
-    return timer[dev].TC;
+    return timers[dev].base->TC;
 }
 
 void timer_start(tim_t dev) {
@@ -290,7 +288,7 @@ void timer_stop(tim_t dev) {
 }
 
 void timer_irq_enable(tim_t dev) {
-    switch(dev) {
+    switch (dev) {
     case TIMER_0:
         NVIC_EnableIRQ(TIMER0_IRQn);
         break;
@@ -303,11 +301,12 @@ void timer_irq_enable(tim_t dev) {
     case TIMER_3:
         NVIC_EnableIRQ(TIMER3_IRQn);
         break;
+    default: break;
     }
 }
 
 void timer_irq_disable(tim_t dev) {
-    switch(dev) {
+    switch (dev) {
     case TIMER_0:
         NVIC_DisableIRQ(TIMER0_IRQn);
         break;
@@ -330,16 +329,16 @@ void timer_reset(tim_t dev) {
 }
 
 #else
-#define timer_init(dev, us_per_tick, callback) #error No TIMER_X_ON defined in periph_conf.h
-#define timer_set(dev, channel, timeout) #error No TIMER_X_ON defined in periph_conf.h
-#define timer_set_absolute(dev, channel, value) #error No TIMER_X_ON defined in periph_conf.h
-#define timer_clear(dev, channel) #error No TIMER_X_ON defined in periph_conf.h
-#define timer_read(dev) #error No TIMER_X_ON defined in periph_conf.h
-#define timer_start(dev) #error No TIMER_X_ON defined in periph_conf.h
-#define timer_stop(dev) #error No TIMER_X_ON defined in periph_conf.h
-#define timer_irq_enable(dev) #error No TIMER_X_ON defined in periph_conf.h
-#define timer_irq_disable(dev) #error No TIMER_X_ON defined in periph_conf.h
-#define timer_reset(dev) #error No TIMER_X_ON defined in periph_conf.h
+#define timer_init(dev, us_per_tick, callback) #error No TIMER_X_EN defined in periph_conf.h
+#define timer_set(dev, channel, timeout) #error No TIMER_X_EN defined in periph_conf.h
+#define timer_set_absolute(dev, channel, value) #error No TIMER_X_EN defined in periph_conf.h
+#define timer_clear(dev, channel) #error No TIMER_X_EN defined in periph_conf.h
+#define timer_read(dev) #error No TIMER_X_EN defined in periph_conf.h
+#define timer_start(dev) #error No TIMER_X_EN defined in periph_conf.h
+#define timer_stop(dev) #error No TIMER_X_EN defined in periph_conf.h
+#define timer_irq_enable(dev) #error No TIMER_X_EN defined in periph_conf.h
+#define timer_irq_disable(dev) #error No TIMER_X_EN defined in periph_conf.h
+#define timer_reset(dev) #error No TIMER_X_EN defined in periph_conf.h
 #endif
 
 #ifdef TIMER_0_EN

@@ -66,33 +66,34 @@ extern "C" {
 #define TXCTCR_OFFSET       0x00000070u
 
 /* Pin connect block */
-#define PINSEL_BASE        0x4002C000u
-#define PINSEL01_ADR        0x4002C004u
-#define PINSEL02_ADR        0x4002C008u
-#define PINSEL03_ADR        0x4002C00Cu
-#define PINSEL04_ADR        0x4002C010u
-#define PINSEL07_ADR        0x4002C01Cu
-#define PINSEL08_ADR        0x4002C020u
-#define PINSEL09_ADR        0x4002C024u
-#define PINSEL10_ADR        0x4002C028u
+#define PINCONNECT_BASE     0x4002C000u
+#define PINSEL00_OFFSET     0x00000000u
+#define PINSEL01_OFFSET     0x00000004u
+#define PINSEL02_OFFSET     0x00000008u
+#define PINSEL03_OFFSET     0x0000000Cu
+#define PINSEL04_OFFSET     0x00000010u
+#define PINSEL07_OFFSET     0x0000001Cu
+#define PINSEL08_OFFSET     0x00000020u
+#define PINSEL09_OFFSET     0x00000024u
+#define PINSEL10_OFFSET     0x00000028u
 
-#define PINMODE_BASE       0x4002C040u
-#define PINMODE01_ADR       0x4002C044u
-#define PINMODE02_ADR       0x4002C048u
-#define PINMODE03_ADR       0x4002C04Cu
-#define PINMODE04_ADR       0x4002C050u
-#define PINMODE05_ADR       0x4002C054u
-#define PINMODE06_ADR       0x4002C058u
-#define PINMODE07_ADR       0x4002C05Cu
-#define PINMODE09_ADR       0x4002C064u
+#define PINMODE00_OFFSET    0x00000040u
+#define PINMODE01_OFFSET    0x00000044u
+#define PINMODE02_OFFSET    0x00000048u
+#define PINMODE03_OFFSET    0x0000004Cu
+#define PINMODE04_OFFSET    0x00000050u
+#define PINMODE05_OFFSET    0x00000054u
+#define PINMODE06_OFFSET    0x00000058u
+#define PINMODE07_OFFSET    0x0000005Cu
+#define PINMODE09_OFFSET    0x00000064u
 
-#define PINMODEOD_BASE      0x4002C068u
-#define PINMODEOD1_ADR      0x4002C06Cu
-#define PINMODEOD2_ADR      0x4002C070u
-#define PINMODEOD3_ADR      0x4002C074u
-#define PINMODEOD4_ADR      0x4002C078u
+#define PINMODEOD0_OFFSET   0x00000068u
+#define PINMODEOD1_OFFSET   0x0000006Cu
+#define PINMODEOD2_OFFSET   0x00000070u
+#define PINMODEOD3_OFFSET   0x00000074u
+#define PINMODEOD4_OFFSET   0x00000078u
 
-#define I2CPADCFG_ADR       0x4002C07Cu
+#define I2CPADCFG_BASE      0x0000007Cu
 
 /* GPIO registers*/
 #define FIO0DIR_ADR         0x2009C000u
@@ -124,6 +125,32 @@ extern "C" {
 #define FIO2CLR_ADR         0x2009C05Cu
 #define FIO3CLR_ADR         0x2009C07Cu
 #define FIO4CLR_ADR         0x2009C09Cu
+
+/* UARTs registers */
+#define UART0_BASE          0x4000C000u
+#define UART1_BASE          0x40010000u
+#define UART2_BASE          0x40098000u
+#define UART3_BASE          0x4009C000u
+
+#define RBR_OFFSET          0x00000000u
+#define THR_OFFSET          0x00000000u
+#define DLL_OFFSET          0x00000000u
+#define DLM_OFFSET          0x00000004u
+#define IER_OFFSET          0x00000004u
+#define IIR_OFFSET          0x00000008u
+#define FCR_OFFSET          0x00000008u
+#define LCR_OFFSET          0x0000000Cu
+#define MCR_OFFSET          0x00000010u
+#define LSR_OFFSET          0x00000014u
+#define MSR_OFFSET          0x00000018u
+#define SCR_OFFSET          0x0000001Cu
+#define ACR_OFFSET          0x00000020u
+#define ICR_OFFSET          0x00000024u
+#define FDR_OFFSET          0x00000028u
+#define TER_OFFSET          0x00000030u
+#define RS485CTRL_OFFSET    0x0000004Cu
+#define ADRMATCH_OFFSET     0x00000050u
+#define RS485DLY_OFFSET     0x00000054u
 
 #ifdef	__cplusplus
 }

@@ -18,13 +18,15 @@
 extern "C" {
 #endif
 
+#include "board.h"
+
 /* Timers */
 #define TIMER_NUMOF         4
 
-#define TIMER_0_EN
-#define TIMER_1_EN
-#define TIMER_2_EN
-#define TIMER_3_EN
+#define TIMER_0_EN          1
+#define TIMER_1_EN          1
+#define TIMER_2_EN          1
+#define TIMER_3_EN          1
 
 #define TIMER_0_MAX_VALUE   (0xFFFFFFFFu)
 #define TIMER_1_MAX_VALUE   (0xFFFFFFFFu)
@@ -42,8 +44,10 @@ extern "C" {
 /* UARTs */
 #define UART_NUMOF          1
 
-#define UART_3_EN
+#define UART_3_EN           1
     
+#define UART_3_CCLK         8
+
 #define BOARD_UART0         UART_3
 
 #ifdef	__cplusplus

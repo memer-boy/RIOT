@@ -184,7 +184,7 @@ typedef struct sys_ctl {
     } PLL1STAT;
 
     // 0x400FC0AC
-    __O uint32_t PLL0FEED;
+    __O uint32_t PLL1FEED;
 
     // 0x400FC0B0
     __I uint32_t RESERVED2[4];
@@ -337,11 +337,11 @@ typedef struct sys_ctl {
     union {
 
         struct {
-            __I uint32_t EXTMODE0 : 1;
-            __I uint32_t EXTMODE1 : 1;
-            __I uint32_t EXTMODE2 : 1;
-            __I uint32_t EXTMODE3 : 1;
-            __I uint32_t : 28;
+            __IO uint32_t EXTMODE0 : 1;
+            __IO uint32_t EXTMODE1 : 1;
+            __IO uint32_t EXTMODE2 : 1;
+            __IO uint32_t EXTMODE3 : 1;
+            __IO uint32_t : 28;
         };
         __IO uint32_t REGISTER;
     } EXTMODE;
@@ -351,11 +351,11 @@ typedef struct sys_ctl {
     union {
 
         struct {
-            __I uint32_t EXTPOLAR0 : 1;
-            __I uint32_t EXTPOLAR1 : 1;
-            __I uint32_t EXTPOLAR2 : 1;
-            __I uint32_t EXTPOLAR3 : 1;
-            __I uint32_t : 28;
+            __IO uint32_t EXTPOLAR0 : 1;
+            __IO uint32_t EXTPOLAR1 : 1;
+            __IO uint32_t EXTPOLAR2 : 1;
+            __IO uint32_t EXTPOLAR3 : 1;
+            __IO uint32_t : 28;
         };
         __IO uint32_t REGISTER;
     } EXTPOLAR;
@@ -386,8 +386,8 @@ typedef struct sys_ctl {
 
         struct {
             __I uint32_t : 4;
-            __I uint32_t OSCRANGE : 1;
-            __I uint32_t OSCEN : 1;
+            __IO uint32_t OSCRANGE : 1;
+            __IO uint32_t OSCEN : 1;
             __I uint32_t OSCSTAT : 1;
             __I uint32_t : 25;
         };
@@ -402,23 +402,23 @@ typedef struct sys_ctl {
     union {
 
         struct {
-            __I uint32_t PCLK_WDT : 2;
-            __I uint32_t PCLK_TIMER0 : 2;
-            __I uint32_t PCLK_TIMER1 : 2;
-            __I uint32_t PCLK_UART0 : 2;
-            __I uint32_t PCLK_UART1 : 2;
-            __I uint32_t : 2;
-            __I uint32_t PCLK_PWM1 : 2;
-            __I uint32_t PCLK_I2C0 : 2;
-            __I uint32_t PCLK_SPI : 2;
-            __I uint32_t : 2;
-            __I uint32_t PCLK_SSP1 : 2;
-            __I uint32_t PCLK_DAC : 2;
-            __I uint32_t PCLK_ADC : 2;
-            __I uint32_t PCLK_CAN1 : 2;
-            __I uint32_t PCLK_CAN2 : 2;
-            __I uint32_t PCLK_ACF : 2;
-            __I uint32_t : 2;
+            __IO uint32_t PCLK_WDT : 2;
+            __IO uint32_t PCLK_TIMER0 : 2;
+            __IO uint32_t PCLK_TIMER1 : 2;
+            __IO uint32_t PCLK_UART0 : 2;
+            __IO uint32_t PCLK_UART1 : 2;
+            __IO uint32_t : 2;
+            __IO uint32_t PCLK_PWM1 : 2;
+            __IO uint32_t PCLK_I2C0 : 2;
+            __IO uint32_t PCLK_SPI : 2;
+            __IO uint32_t : 2;
+            __IO uint32_t PCLK_SSP1 : 2;
+            __IO uint32_t PCLK_DAC : 2;
+            __IO uint32_t PCLK_ADC : 2;
+            __IO uint32_t PCLK_CAN1 : 2;
+            __IO uint32_t PCLK_CAN2 : 2;
+            __IO uint32_t PCLK_ACF : 2;
+            __IO uint32_t : 2;
         };
         __IO uint32_t REGISTER;
     } PCLKSEL0;
@@ -428,28 +428,28 @@ typedef struct sys_ctl {
     union {
 
         struct {
-            __I uint32_t PCLK_QEI : 2;
-            __I uint32_t PCLK_GPIOINT : 2;
-            __I uint32_t PCLK_PCB : 2;
-            __I uint32_t PCLK_I2C1 : 2;
-            __I uint32_t : 2;
-            __I uint32_t PCLK_SSP0 : 2;
-            __I uint32_t PCLK_TIMER2 : 2;
-            __I uint32_t PCLK_TIMER3 : 2;
-            __I uint32_t PCLK_UART2 : 2;
-            __I uint32_t PCLK_UART3 : 2;
-            __I uint32_t PCLK_I2C2 : 2;
-            __I uint32_t PCLK_I2S : 2;
-            __I uint32_t : 2;
-            __I uint32_t PCLK_RIT : 2;
-            __I uint32_t PCLK_SYSCON : 2;
-            __I uint32_t PCLK_MC : 2;
+            __IO uint32_t PCLK_QEI : 2;
+            __IO uint32_t PCLK_GPIOINT : 2;
+            __IO uint32_t PCLK_PCB : 2;
+            __IO uint32_t PCLK_I2C1 : 2;
+            __IO uint32_t : 2;
+            __IO uint32_t PCLK_SSP0 : 2;
+            __IO uint32_t PCLK_TIMER2 : 2;
+            __IO uint32_t PCLK_TIMER3 : 2;
+            __IO uint32_t PCLK_UART2 : 2;
+            __IO uint32_t PCLK_UART3 : 2;
+            __IO uint32_t PCLK_I2C2 : 2;
+            __IO uint32_t PCLK_I2S : 2;
+            __IO uint32_t : 2;
+            __IO uint32_t PCLK_RIT : 2;
+            __IO uint32_t PCLK_SYSCON : 2;
+            __IO uint32_t PCLK_MC : 2;
         };
         __IO uint32_t REGISTER;
     } PCLKSEL1;
 
     // 0x400FC1B0
-    __I uint32_t RESERVED8[4];
+    __I uint32_t RESERVED9[4];
 
     // 0x400FC1C0
 
@@ -607,12 +607,12 @@ typedef struct timer {
         __IO uint32_t REGISTER;
     } CTCR;
 
-} timer_t;
+} lpc_timer_t;
 
-#define LPC_TMR0        (*((timer_t *) T0_BASE))
-#define LPC_TMR1        (*((timer_t *) T1_BASE))
-#define LPC_TMR2        (*((timer_t *) T2_BASE))
-#define LPC_TMR3        (*((timer_t *) T3_BASE))
+#define LPC_TMR0        (*((lpc_timer_t *) T0_BASE))
+#define LPC_TMR1        (*((lpc_timer_t *) T1_BASE))
+#define LPC_TMR2        (*((lpc_timer_t *) T2_BASE))
+#define LPC_TMR3        (*((lpc_timer_t *) T3_BASE))
 
 /* Pin connect block */
 typedef union pinsel {
@@ -661,9 +661,157 @@ typedef union pinmodeod {
     __IO uint32_t OD[5];
 } pinmodeod_t;
 
-#define PINSEL          (*((pinsel_t *)PINSEL_BASE))
-#define PINMODE         (*((pinmode_t *)PINMODE_BASE))
-#define PINMODEOD       (*((pinmodeod_t *)PINMODEOD_BASE))
+#define LPC_PINSEL      (*((pinsel_t *)(PINCONNECT_BASE + PINSEL00_OFFSET)))
+#define LPC_PINMODE     (*((pinmode_t *)(PINCONNECT_BASE + PINMODE00_OFFSET)))
+#define LPC_PINMODEOD   (*((pinmodeod_t *)(PINCONNECT_BASE + PINMODEOD0_OFFSET)))
+
+/* UARTs */
+typedef union uart {
+
+    union {
+
+        struct {
+            __I uint32_t RBR : 8;
+            __I uint32_t : 24;
+        };
+
+        struct {
+            __O uint32_t THR : 8;
+            __O uint32_t : 24;
+        };
+
+        struct {
+            __IO uint32_t DLL : 8;
+            __IO uint32_t : 24;
+        };
+    };
+
+    union {
+
+        struct {
+            __IO uint32_t RBR_IE : 1;
+            __IO uint32_t THRE_IE : 1;
+            __IO uint32_t RXLS_IE : 1;
+            __IO uint32_t : 5;
+            __IO uint32_t ABEOIntEn : 1;
+            __IO uint32_t ABTOIntEn : 1;
+            __IO uint32_t : 22;
+        } IER;
+
+        struct {
+            __IO uint32_t DLM : 8;
+            __IO uint32_t : 24;
+        };
+    };
+
+    union {
+
+        struct {
+            __I uint32_t IntStatus : 1;
+            __I uint32_t IntId : 3;
+            __I uint32_t : 2;
+            __I uint32_t FIFO_EN : 2;
+            __I uint32_t ABEOInt : 1;
+            __I uint32_t ABTOInt : 1;
+            __I uint32_t : 22;
+        } IIR;
+
+        struct {
+            __O uint32_t FIFO_EN : 1;
+            __O uint32_t RX_FIFO_RS : 1;
+            __O uint32_t TX_FIFO_RS : 1;
+            __O uint32_t DMA_MODE : 1;
+            __O uint32_t : 2;
+            __O uint32_t RX_TLEVEL : 2;
+            __O uint32_t : 24;
+        } FCR;
+    };
+
+    union {
+
+        struct {
+            __IO uint32_t WORD_LEN : 2;
+            __IO uint32_t STOP_BIT : 1;
+            __IO uint32_t PARITY_EN : 1;
+            __IO uint32_t PARITY_SEL : 2;
+            __IO uint32_t BREAK_CTL : 1;
+            __IO uint32_t DLAB : 1;
+            __IO uint32_t : 24;
+        } LCR;
+    };
+    __I uint32_t RESERVED0;
+
+    union {
+
+        struct {
+            __I uint32_t RDR : 1;
+            __I uint32_t OE : 1;
+            __I uint32_t PE : 1;
+            __I uint32_t FE : 1;
+            __I uint32_t BI : 1;
+            __I uint32_t THRE : 1;
+            __I uint32_t TEMT : 1;
+            __I uint32_t RXFE : 1;
+            __I uint32_t : 24;
+        } LSR;
+    };
+    __I uint32_t RESERVED1;
+
+    union {
+
+        struct {
+            __IO uint32_t SCR : 8;
+            __IO uint32_t : 24;
+        };
+    };
+
+    union {
+
+        struct {
+            __IO uint32_t START : 1;
+            __IO uint32_t MODE : 1;
+            __IO uint32_t AUTORESTART : 1;
+            __IO uint32_t : 5;
+            __IO uint32_t ABEOIntClr : 1;
+            __IO uint32_t ABTOIntClr : 1;
+            __IO uint32_t : 22;
+        } ACR;
+    };
+
+    union {
+
+        struct {
+            __IO uint32_t IrDAEn : 1;
+            __IO uint32_t IrDAInv : 1;
+            __IO uint32_t FixPulseEn : 1;
+            __IO uint32_t PulseDiv : 3;
+            __IO uint32_t : 26;
+        } ICR;
+    };
+
+    union {
+
+        struct {
+            __IO uint32_t DIVADDVAL : 4;
+            __IO uint32_t MULVAL : 4;
+            __IO uint32_t : 24;
+        } FDR;
+    };
+    __I uint32_t RESERVED2;
+
+    union {
+
+        struct {
+            __IO uint32_t : 7;
+            __IO uint32_t TXEN : 1;
+            __IO uint32_t : 24;
+        } TER;
+    };
+} uartx_t;
+
+#define LPC_UART0       (*((uartx_t *) UART0_BASE))
+#define LPC_UART2       (*((uartx_t *) UART2_BASE))
+#define LPC_UART3       (*((uartx_t *) UART3_BASE))
 
 #ifdef	__cplusplus
 }

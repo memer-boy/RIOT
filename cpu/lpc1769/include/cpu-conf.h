@@ -18,12 +18,43 @@
 extern "C" {
 #endif
 
-#define CPU_ID_LEN  32
+/**
+ * @name Kernel configuration
+ * @{
+ */
+#define KERNEL_CONF_STACKSIZE_PRINTF    1024
 
+#ifndef KERNEL_CONF_STACKSIZE_DEFAULT
+#define KERNEL_CONF_STACKSIZE_DEFAULT   1024
+#endif
+
+#define KERNEL_CONF_STACKSIZE_IDLE      512
+/** @} */
+
+/**
+ * @name UART0 buffer size definition for compatibility reasons
+ * @{
+ */
+#ifndef UART0_BUFSIZE
+#define UART0_BUFSIZE                   128
+#endif
+/** @} */
+
+/**
+ * @brief   length of CPU ID for @ref cpuid_get() in @ref periph/cpuid.h
+ */
+#ifndef CPUID_ID_LEN
+#define CPUID_ID_LEN                    32
+#endif
+
+#define __NVIC_PRIO_BITS 5 /*!< Number of Bits used for Priority Levels */
 
 #ifdef	__cplusplus
 }
 #endif
+
+#include "cpuvars.h"
+#include "core_cm3.h"
 
 #endif	/* CPU_CONF_H */
 

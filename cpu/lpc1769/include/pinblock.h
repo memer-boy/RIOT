@@ -40,11 +40,22 @@ extern "C" {
 #define TRACE_PIN       0x01
 
 #define PIN(BLOCK,NUMBER)   ( ( (BLOCK & 0x0f) << 4 ) | (NUMBER & 0x0f) )
-#define CONNECT(PIN, FUNCTION, PULLS, OPENDRAIN)    \
-{ PIN, { FUNCTION, PULLS, OPENDRAIN } }
+#define CONNECT(PINDEF, FUNCTION, PULLS, OPENDRAIN) { .cfg = PINDEF, .function = FUNCTION, .mode = PULLS, .opendrain = OPENDRAIN }
 
+typedef struct pinblock {
+    uint8_t pin;
 
-typedef struct pinblock pinblock_t;
+    union {
+
+        struct {
+            uint8_t function : 2;
+            uint8_t mode : 2;
+            uint8_t opendrain : 1;
+            uint8_t RESERVED : 3;
+        };
+        uint8_t cfg;
+    };
+} pinblock_t;
 
 /**
  * @brief Initialize pin connect block.

@@ -16,3 +16,10 @@ cachegrind.out*
 .idea
 /toolchain
 /nbproject/
+/cpu/lpc1769/include/bus_defs.h
+/cpu/lpc1769/include/bus_funcs.h
+/cpu/lpc1769/bus_space.c
+/cpu/lpc1769/periph/cpuid.c
+/cpu/lpc1769/sys/include/device.h
+/cpu/lpc1769/sys/include/
+/cpu/lpc1769/sys/
