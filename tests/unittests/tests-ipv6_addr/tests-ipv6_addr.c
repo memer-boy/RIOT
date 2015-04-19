@@ -403,13 +403,23 @@ static void test_ipv6_addr_match_prefix_same_pointer(void)
 
 static void test_ipv6_addr_init_prefix(void)
 {
-    ng_ipv6_addr_t a, b = { {
+    ng_ipv6_addr_t a = { {
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+        }
+    };
+    ng_ipv6_addr_t b = { {
             0x00, 0x01, 0x02, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         }
     };
+    ng_ipv6_addr_t c =  { {
+            0xff, 0xfe, 0xfd, 0xfd, 0x04, 0x05, 0x06, 0x07,
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+        }
+    };
 
-    ng_ipv6_addr_init_prefix(&a, &b, 31);
-    TEST_ASSERT_EQUAL_INT(true, ng_ipv6_addr_equal(&a, &b));
+    ng_ipv6_addr_init_prefix(&c, &b, 31);
+    TEST_ASSERT_EQUAL_INT(true, ng_ipv6_addr_equal(&a, &c));
 }
 
 static void test_ipv6_addr_set_unspecified(void)
@@ -812,13 +822,13 @@ static void test_ipv6_addr_from_str__success5(void)
 static void test_ipv6_addr_from_str__success6(void)
 {
     ng_ipv6_addr_t a = { {
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0xff, 0xff, 192, 168, 0, 1
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff, 255, 255, 255, 255
         }
     };
     ng_ipv6_addr_t result;
 
-    TEST_ASSERT_NOT_NULL(ng_ipv6_addr_from_str(&result, "::ffff:192.168.0.1"));
+    TEST_ASSERT_NOT_NULL(ng_ipv6_addr_from_str(&result, "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"));
     TEST_ASSERT(ng_ipv6_addr_equal(&a, &result));
 }
 

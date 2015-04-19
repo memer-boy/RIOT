@@ -44,7 +44,7 @@ extern "C" {
  * @brief   Maximum length of an IPv6 address as string.
  */
 #define NG_IPV6_ADDR_MAX_STR_LEN    (sizeof("ffff:ffff:ffff:ffff:" \
-                                            "ffff:ffff:ffff:ffff"))
+                                            "ffff:ffff:255.255.255.255"))
 
 /**
  * @brief Data type to represent an IPv6 address.
@@ -330,7 +330,7 @@ uint8_t ng_ipv6_addr_match_prefix(const ng_ipv6_addr_t *a, const ng_ipv6_addr_t 
 
 /**
  * @brief   Sets IPv6 address @p out with the first @p bits bit taken
- *          from @p prefix and the remaining bits to 0.
+ *          from @p prefix and leaves the remaining bits untouched.
  *
  * @param[out]  out     Prefix to be set.
  * @param[in]   prefix  Address to take prefix from.

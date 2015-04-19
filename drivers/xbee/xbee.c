@@ -142,7 +142,7 @@ static void _api_at_cmd(xbee_t *dev, uint8_t *cmd, uint8_t size, resp_t *resp)
 /*
  * Interrupt callbacks
  */
-int _tx_cb(void *arg)
+static int _tx_cb(void *arg)
 {
     xbee_t *dev = (xbee_t *)arg;
     if (dev->tx_count < dev->tx_limit) {
@@ -156,7 +156,7 @@ int _tx_cb(void *arg)
     return 0;
 }
 
-void _rx_cb(void *arg, char c)
+static void _rx_cb(void *arg, char c)
 {
     xbee_t *dev = (xbee_t *)arg;
     msg_t msg;
@@ -223,7 +223,7 @@ void _rx_cb(void *arg, char c)
  * Getter and setter functions
  */
 
-int _get_addr_short(xbee_t *dev, uint8_t *val, size_t len)
+static int _get_addr_short(xbee_t *dev, uint8_t *val, size_t len)
 {
     uint8_t cmd[2];
     resp_t resp;
@@ -242,7 +242,7 @@ int _get_addr_short(xbee_t *dev, uint8_t *val, size_t len)
     return -ECANCELED;
 }
 
-int _get_addr_long(xbee_t *dev, uint8_t *val, size_t len)
+static int _get_addr_long(xbee_t *dev, uint8_t *val, size_t len)
 {
     uint8_t cmd[2];
     resp_t resp;
@@ -271,7 +271,7 @@ int _get_addr_long(xbee_t *dev, uint8_t *val, size_t len)
     return -ECANCELED;
 }
 
-int _set_addr(xbee_t *dev, uint8_t *val, size_t len)
+static int _set_addr(xbee_t *dev, uint8_t *val, size_t len)
 {
     uint8_t cmd[4];
     resp_t resp;
@@ -292,7 +292,7 @@ int _set_addr(xbee_t *dev, uint8_t *val, size_t len)
     return -ECANCELED;
 }
 
-int _get_channel(xbee_t *dev, uint8_t *val, size_t max)
+static int _get_channel(xbee_t *dev, uint8_t *val, size_t max)
 {
     uint8_t cmd[2];
     resp_t resp;
@@ -311,7 +311,7 @@ int _get_channel(xbee_t *dev, uint8_t *val, size_t max)
     return -ECANCELED;
 }
 
-int _set_channel(xbee_t *dev, uint8_t *val, size_t len)
+static int _set_channel(xbee_t *dev, uint8_t *val, size_t len)
 {
     uint8_t cmd[3];
     resp_t resp;
@@ -329,7 +329,18 @@ int _set_channel(xbee_t *dev, uint8_t *val, size_t len)
     return -EINVAL;
 }
 
-int _get_panid(xbee_t *dev, uint8_t *val, size_t max)
+static int _get_max_packet_size(xbee_t *dev, uint16_t *val, size_t max)
+{
+    if (max < 2) {
+        return -EOVERFLOW;
+    }
+
+    *val = XBEE_MAX_PAYLOAD_LENGTH;
+
+    return 2;
+}
+
+static int _get_panid(xbee_t *dev, uint8_t *val, size_t max)
 {
     uint8_t cmd[2];
     resp_t resp;
@@ -348,7 +359,7 @@ int _get_panid(xbee_t *dev, uint8_t *val, size_t max)
     return -ECANCELED;
 }
 
-int _set_panid(xbee_t *dev, uint8_t *val, size_t len)
+static int _set_panid(xbee_t *dev, uint8_t *val, size_t len)
 {
     uint8_t cmd[4];
     resp_t resp;
@@ -367,7 +378,7 @@ int _set_panid(xbee_t *dev, uint8_t *val, size_t len)
     return -EINVAL;
 }
 
-int _get_proto(xbee_t *dev, uint8_t *val, size_t max)
+static int _get_proto(xbee_t *dev, uint8_t *val, size_t max)
 {
     if (max < sizeof(ng_nettype_t)) {
         return -EOVERFLOW;
@@ -376,7 +387,7 @@ int _get_proto(xbee_t *dev, uint8_t *val, size_t max)
     return sizeof(ng_nettype_t);
 }
 
-int _set_proto(xbee_t *dev, uint8_t *val, size_t len)
+static int _set_proto(xbee_t *dev, uint8_t *val, size_t len)
 {
     if (len != sizeof(ng_nettype_t)) {
         return -EINVAL;
@@ -486,7 +497,13 @@ int xbee_init(xbee_t *dev, uart_t uart, uint32_t baudrate,
     return 0;
 }
 
-int _send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
+static inline bool _is_broadcast(ng_netif_hdr_t *hdr) {
+    /* IEEE 802.15.4 does not support multicast so we need to check both flags */
+    return (bool)(hdr->flags & (NG_NETIF_HDR_FLAGS_BROADCAST |
+                                NG_NETIF_HDR_FLAGS_MULTICAST));
+}
+
+static int _send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
 {
     xbee_t *dev = (xbee_t *)netdev;
     size_t size;
@@ -510,9 +527,10 @@ int _send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
         ng_pktbuf_release(pkt);
         return -EOVERFLOW;
     }
-    /* get netif header check address length */
+    /* get netif header check address length and flags */
     hdr = (ng_netif_hdr_t *)pkt->data;
-    if (!(hdr->dst_l2addr_len == 2 || hdr->dst_l2addr_len == 8)) {
+    if (!((hdr->dst_l2addr_len == 2) || (hdr->dst_l2addr_len == 8) ||
+          _is_broadcast(hdr))) {
         ng_pktbuf_release(pkt);
         return -ENOMSG;
     }
@@ -523,6 +541,13 @@ int _send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
     dev->tx_buf[0] = API_START_DELIMITER;
     dev->tx_buf[4] = 0;         /* set to zero to disable response frame */
     /* set size, API id and address field depending on dst address length  */
+    if (_is_broadcast(hdr)) {
+        dev->tx_buf[1] = (uint8_t)((size + 5) >> 8);
+        dev->tx_buf[2] = (uint8_t)(size + 5);
+        dev->tx_buf[3] = API_ID_TX_SHORT_ADDR;
+        dev->tx_buf[4] = 0xff;
+        dev->tx_buf[5] = 0xff;
+    }
     if (hdr->dst_l2addr_len == 2) {
         dev->tx_buf[1] = (uint8_t)((size + 5) >> 8);
         dev->tx_buf[2] = (uint8_t)(size + 5);
@@ -558,7 +583,7 @@ int _send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
     return (int)size;
 }
 
-int _add_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
+static int _add_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
 {
     if (dev == NULL) {
         return -ENODEV;
@@ -570,7 +595,7 @@ int _add_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
     return 0;
 }
 
-int _rem_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
+static int _rem_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
 {
     if (dev == NULL) {
         return -ENODEV;
@@ -582,7 +607,8 @@ int _rem_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
     return 0;
 }
 
-int _get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t max_len)
+static int _get(ng_netdev_t *netdev, ng_netconf_opt_t opt,
+                void *value, size_t max_len)
 {
     xbee_t *dev = (xbee_t *)netdev;
     if (dev == NULL) {
@@ -596,6 +622,8 @@ int _get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t max_len)
             return _get_addr_long(dev, (uint8_t *)value, max_len);
         case NETCONF_OPT_CHANNEL:
             return _get_channel(dev, (uint8_t *)value, max_len);
+        case NETCONF_OPT_MAX_PACKET_SIZE:
+            return _get_max_packet_size(dev, (uint16_t *)value, max_len);
         case NETCONF_OPT_NID:
             return _get_panid(dev, (uint8_t *)value, max_len);
         case NETCONF_OPT_PROTO:
@@ -605,7 +633,8 @@ int _get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t max_len)
     }
 }
 
-int _set(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t value_len)
+static int _set(ng_netdev_t *netdev, ng_netconf_opt_t opt,
+                void *value, size_t value_len)
 {
     xbee_t *dev = (xbee_t *)netdev;
     if (dev == NULL) {
@@ -626,7 +655,7 @@ int _set(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t value_le
     }
 }
 
-void _isr_event(ng_netdev_t *netdev, uint32_t event_type)
+static void _isr_event(ng_netdev_t *netdev, uint32_t event_type)
 {
     xbee_t *dev = (xbee_t *)netdev;
     ng_pktsnip_t *pkt_head;

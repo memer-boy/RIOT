@@ -48,6 +48,11 @@ ifneq (,$(filter sixlowpan,$(USEMODULE)))
   USEMODULE += vtimer
 endif
 
+ifneq (,$(filter ng_ipv6_hdr,$(USEMODULE)))
+  USEMODULE += ng_inet_csum
+  USEMODULE += ng_pktbuf
+endif
+
 ifneq (,$(filter ng_ipv6_nc,$(USEMODULE)))
   USEMODULE += ng_ipv6_addr
 endif
@@ -66,6 +71,7 @@ endif
 
 ifneq (,$(filter ng_pktdump,$(USEMODULE)))
   USEMODULE += ng_pktbuf
+  USEMODULE += od
 endif
 
 ifneq (,$(filter aodvv2,$(USEMODULE)))
@@ -155,4 +161,9 @@ ifneq (,$(filter fib,$(USEMODULE)))
   USEMODULE += timex
   USEMODULE += vtimer
   USEMODULE += net_help
+endif
+
+ifneq (,$(filter oonf_common,$(USEMODULE)))
+  USEPKG += oonf_api
+  USEMODULE += socket_base
 endif
