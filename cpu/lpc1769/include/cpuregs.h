@@ -96,35 +96,37 @@ extern "C" {
 #define I2CPADCFG_BASE      0x0000007Cu
 
 /* GPIO registers*/
-#define FIO0DIR_ADR         0x2009C000u
-#define FIO1DIR_ADR         0x2009C020u
-#define FIO2DIR_ADR         0x2009C040u
-#define FIO3DIR_ADR         0x2009C060u
-#define FIO4DIR_ADR         0x2009C080u
+#define GPIO_BASE           0x2009C000u
 
-#define FIO0MASK_ADR        0x2009C010u
-#define FIO1MASK_ADR        0x2009C030u
-#define FIO2MASK_ADR        0x2009C050u
-#define FIO3MASK_ADR        0x2009C070u
-#define FIO4MASK_ADR        0x2009C090u
+#define FIO0DIR_OFFSET      0x00000000u
+#define FIO1DIR_OFFSET      0x00000020u
+#define FIO2DIR_OFFSET      0x00000040u
+#define FIO3DIR_OFFSET      0x00000060u
+#define FIO4DIR_OFFSET      0x00000080u
 
-#define FIO0PIN_ADR         0x2009C014u
-#define FIO1PIN_ADR         0x2009C034u
-#define FIO2PIN_ADR         0x2009C054u
-#define FIO3PIN_ADR         0x2009C074u
-#define FIO4PIN_ADR         0x2009C094u
+#define FIO0MASK_OFFSET     0x00000010u
+#define FIO1MASK_OFFSET     0x00000030u
+#define FIO2MASK_OFFSET     0x00000050u
+#define FIO3MASK_OFFSET     0x00000070u
+#define FIO4MASK_OFFSET     0x00000090u
 
-#define FIO0SET_ADR         0x2009C018u
-#define FIO1SET_ADR         0x2009C038u
-#define FIO2SET_ADR         0x2009C058u
-#define FIO3SET_ADR         0x2009C078u
-#define FIO4SET_ADR         0x2009C098u
+#define FIO0PIN_OFFSET      0x00000014u
+#define FIO1PIN_OFFSET      0x00000034u
+#define FIO2PIN_OFFSET      0x00000054u
+#define FIO3PIN_OFFSET      0x00000074u
+#define FIO4PIN_OFFSET      0x00000094u
 
-#define FIO0CLR_ADR         0x2009C01Cu
-#define FIO1CLR_ADR         0x2009C03Cu
-#define FIO2CLR_ADR         0x2009C05Cu
-#define FIO3CLR_ADR         0x2009C07Cu
-#define FIO4CLR_ADR         0x2009C09Cu
+#define FIO0SET_OFFSET      0x00000018u
+#define FIO1SET_OFFSET      0x00000038u
+#define FIO2SET_OFFSET      0x00000058u
+#define FIO3SET_OFFSET      0x00000078u
+#define FIO4SET_OFFSET      0x00000098u
+
+#define FIO0CLR_OFFSET      0x0000001Cu
+#define FIO1CLR_OFFSET      0x0000003Cu
+#define FIO2CLR_OFFSET      0x0000005Cu
+#define FIO3CLR_OFFSET      0x0000007Cu
+#define FIO4CLR_OFFSET      0x0000009Cu
 
 /* UARTs registers */
 #define UART0_BASE          0x4000C000u

@@ -16,6 +16,8 @@
 #include "cpuvars.h"
 #include "periph_conf.h"
 #include "board.h"
+#include "sched.h"
+#include "thread.h"
 
 #ifdef TIMER_0_EN
 #if TIMER_0_CCLK == 8
@@ -27,7 +29,7 @@
 #elif TIMER_0_CCLK == 1
 #define TIMER_0_CCLKSEL     (0b01)
 #else
-#error TIMER_0_CCLK devider has an invalid value or is not defined in periph_conf.h
+#error TIMER_0_CCLK divider has an invalid value or is not defined in periph_conf.h
 #endif
 
 #define TIMER_0_US_CONSTANT ((F_CPU/TIMER_0_CCLK)/1000000UL)
@@ -44,7 +46,7 @@
 #elif TIMER_1_CCLK == 1
 #define TIMER_1_CCLKSEL     (0b01)
 #else
-#error TIMER_1_CCLK devider has an invalid value or is not defined in periph_conf.h
+#error TIMER_1_CCLK divider has an invalid value or is not defined in periph_conf.h
 #endif
 
 #define TIMER_1_US_CONSTANT ((F_CPU/TIMER_1_CCLK)/1000000UL)
@@ -61,7 +63,7 @@
 #elif TIMER_2_CCLK == 1
 #define TIMER_2_CCLKSEL     (0b01)
 #else
-#error TIMER_2_CCLK devider has an invalid value or is not defined in periph_conf.h
+#error TIMER_2_CCLK divider has an invalid value or is not defined in periph_conf.h
 #endif
 
 #define TIMER_2_US_CONSTANT ((F_CPU/TIMER_2_CCLK)/1000000UL)
@@ -79,7 +81,7 @@
 #elif TIMER_3_CCLK == 1
 #define TIMER_3_CCLKSEL     (0b01)
 #else
-#error TIMER_3_CCLK devider has an invalid value or is not defined in periph_conf.h
+#error TIMER_3_CCLK divider has an invalid value or is not defined in periph_conf.h
 #endif
 
 #define TIMER_3_US_CONSTANT ((F_CPU/TIMER_3_CCLK)/1000000UL)
@@ -87,30 +89,34 @@
 #endif
 
 #define PTIMER_ISR_DECL(X)                      \
-void isr_timer ## X(void) {                 \
-    int chan = 0;                                   \
-    if (timers[X].base->IR.MR0) {               \
-        timers[X].base->IR.MR0 = 1;             \
-        timers[X].base->MCR.MR0I = 0;           \
-        chan = 0;                               \
+void isr_timer ## X(void) {                 	\
+    if (timers[TIMER_ ## X].base->IR.MR0) {     \
+        timers[TIMER_ ## X].base->IR.MR0 = 1;   \
+        timers[TIMER_ ## X].base->MCR.MR0I = 0; \
+        if(timers[TIMER_ ## X].callback != 0)	\
+			timers[TIMER_ ## X].callback(0);  	\
     }                                           \
-    else if (timers[X].base->IR.MR1) {          \
-        timers[X].base->IR.MR1 = 1;             \
-        timers[X].base->MCR.MR1I = 0;           \
-        chan = 1;                               \
+    else if (timers[TIMER_ ## X].base->IR.MR1) {\
+        timers[TIMER_ ## X].base->IR.MR1 = 1;   \
+        timers[TIMER_ ## X].base->MCR.MR1I = 0; \
+        if(timers[TIMER_ ## X].callback != 0)	\
+	        timers[TIMER_ ## X].callback(1);  	\
     }                                           \
-    else if (timers[X].base->IR.MR2) {          \
-        timers[X].base->IR.MR2 = 1;             \
-        timers[X].base->MCR.MR2I = 0;           \
-        chan = 2;                               \
+    else if (timers[TIMER_ ## X].base->IR.MR2) {\
+        timers[TIMER_ ## X].base->IR.MR2 = 1;   \
+        timers[TIMER_ ## X].base->MCR.MR2I = 0; \
+        if(timers[TIMER_ ## X].callback != 0)	\
+	        timers[TIMER_ ## X].callback(2);  	\
     }                                           \
-    else if (timers[X].base->IR.MR3) {          \
-        timers[X].base->IR.MR3 = 1;             \
-        timers[X].base->MCR.MR3I = 0;           \
-        chan = 3;                               \
+    else if (timers[TIMER_ ## X].base->IR.MR3) {\
+        timers[TIMER_ ## X].base->IR.MR3 = 1;   \
+        timers[TIMER_ ## X].base->MCR.MR3I = 0; \
+        if(timers[TIMER_ ## X].callback != 0)	\
+	        timers[TIMER_ ## X].callback(3);  	\
     }                                           \
-    NVIC_ClearPendingIRQ(TIMER ## X ##_IRQn);  \
-    timers[X].callback(chan);                   \
+    if (sched_context_switch_request) {			\
+    	thread_yield_higher();					\
+    }											\
 }
 
 #if defined(TIMER_0_EN) || defined(TIMER_1_EN) || defined(TIMER_2_EN) || defined(TIMER_3_EN)
@@ -120,11 +126,19 @@ struct ptimer {
     void (*callback)(int);
 };
 
-struct ptimer timers[4] = {
+struct ptimer timers[] = {
+#ifdef TIMER_0_EN
     {&LPC_TMR0},
+#endif
+#ifdef TIMER_1_EN
     {&LPC_TMR1},
+#endif
+#ifdef TIMER_2_EN
     {&LPC_TMR2},
+#endif
+#ifdef TIMER_3_EN
     {&LPC_TMR3},
+#endif
 };
 
 const uint8_t current = 0;
@@ -147,6 +161,8 @@ int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
         LPC_TMR0.TCR.REGISTER = 0b10;
         LPC_TMR0.TCR.REGISTER = 0b01;
 
+        /* configure and enable timer interrupts */
+        NVIC_SetPriority(TIMER0_IRQn, TIMER_IRQ_PRIO);
         NVIC_EnableIRQ(TIMER0_IRQn);
 
         break;
@@ -162,6 +178,8 @@ int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
         LPC_TMR1.TCR.REGISTER = 0b10;
         LPC_TMR1.TCR.REGISTER = 0b01;
 
+        /* configure and enable timer interrupts */
+        NVIC_SetPriority(TIMER1_IRQn, TIMER_IRQ_PRIO);
         NVIC_EnableIRQ(TIMER1_IRQn);
 
         break;
@@ -177,6 +195,7 @@ int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
         LPC_TMR2.TCR.REGISTER = 0b10;
         LPC_TMR2.TCR.REGISTER = 0b01;
 
+        NVIC_SetPriority(TIMER2_IRQn, TIMER_IRQ_PRIO);
         NVIC_EnableIRQ(TIMER2_IRQn);
 
         break;
@@ -192,6 +211,7 @@ int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
         LPC_TMR3.TCR.REGISTER = 0b10;
         LPC_TMR3.TCR.REGISTER = 0b01;
 
+        NVIC_SetPriority(TIMER3_IRQn, TIMER_IRQ_PRIO);
         NVIC_EnableIRQ(TIMER3_IRQn);
 
         break;
@@ -205,28 +225,29 @@ int timer_init(tim_t dev, unsigned int us_per_tick, void (*callback)(int)) {
 }
 
 int timer_set(tim_t dev, int channel, unsigned int timeout) {
-    unsigned int value = timer_read(dev) + timeout;
+//    unsigned int value = timer_read(dev) + timeout;
+//
+//    switch (channel) {
+//    case 0:
+//        timers[dev].base->MR0 = value;
+//        timers[dev].base->MCR.MR0I = 1;
+//        break;
+//    case 1:
+//        timers[dev].base->MR1 = value;
+//        timers[dev].base->MCR.MR1I = 1;
+//        break;
+//    case 2:
+//        timers[dev].base->MR2 = value;
+//        timers[dev].base->MCR.MR2I = 1;
+//        break;
+//    case 3:
+//        timers[dev].base->MR3 = value;
+//        timers[dev].base->MCR.MR3I = 1;
+//        break;
+//    }
 
-    switch (channel) {
-    case 0:
-        timers[dev].base->MR0 = value;
-        timers[dev].base->MCR.MR0I = 1;
-        break;
-    case 1:
-        timers[dev].base->MR1 = value;
-        timers[dev].base->MCR.MR1I = 1;
-        break;
-    case 2:
-        timers[dev].base->MR2 = value;
-        timers[dev].base->MCR.MR2I = 1;
-        break;
-    case 3:
-        timers[dev].base->MR3 = value;
-        timers[dev].base->MCR.MR3I = 1;
-        break;
-    }
-
-    return 1;
+    unsigned int now = timer_read(dev);
+    return timer_set_absolute(dev, channel, now + timeout);
 }
 
 int timer_set_absolute(tim_t dev, int channel, unsigned int value) {
@@ -255,19 +276,15 @@ int timer_set_absolute(tim_t dev, int channel, unsigned int value) {
 int timer_clear(tim_t dev, int channel) {
     switch (channel) {
     case 0:
-        timers[dev].base->MR0 = 0;
         timers[dev].base->MCR.MR0I = 0;
         break;
     case 1:
-        timers[dev].base->MR1 = 0;
         timers[dev].base->MCR.MR1I = 0;
         break;
     case 2:
-        timers[dev].base->MR2 = 0;
         timers[dev].base->MCR.MR2I = 0;
         break;
     case 3:
-        timers[dev].base->MR3 = 0;
         timers[dev].base->MCR.MR3I = 0;
         break;
     }

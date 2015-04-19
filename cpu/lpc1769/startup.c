@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+
 /**
  * memory markers as defined in the linker script
  */

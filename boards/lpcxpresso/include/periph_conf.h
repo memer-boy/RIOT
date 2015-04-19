@@ -22,6 +22,7 @@ extern "C" {
 
 /* Timers */
 #define TIMER_NUMOF         4
+#define TIMER_IRQ_PRIO      1
 
 #define TIMER_0_EN          1
 #define TIMER_1_EN          1
@@ -49,6 +50,7 @@ extern "C" {
 #define UART_3_CCLK         8
 
 #define BOARD_UART0         UART_3
+#define UART_IRQ_PRIO       1
 
 #ifdef	__cplusplus
 }

@@ -11,12 +11,14 @@
  * directory for more details.
  */
 
+#include <stdbool.h>
 #include "cpu-conf.h"
 #include "core_cm3.h"
 #include "cpuvars.h"
 #include "periph_conf.h"
 #include "periph/uart.h"
-#include <stdbool.h>
+#include "sched.h"
+#include "thread.h"
 
 #ifdef UART_1_EN
 #error UART1 is not implemented yet!
@@ -87,18 +89,26 @@
 #define CTI_ID 0b110
 #define THR_ID 0b001
 
-#define ISR_DECL(X)                             \
-void isr_uart ## X (void) {                  \
-    int id = uarts[X].base->IIR.IntId;          \
-    do {                                        \
-        if (id == RDA_ID) {                     \
-            uarts[X].rx_cb(uarts[X].arg, uarts[X].base->RBR);\
-        }                                       \
-        if (id == THR_ID) {                     \
-            uarts[X].tx_cb(uarts[X].arg);       \
-        }                                       \
-    } while (!uarts[X].base->IIR.IntStatus);    \
-    NVIC_ClearPendingIRQ(UART ## X ## _IRQn);   \
+#define ISR_DECL(X)                             		\
+void isr_uart ## X (void) {                  			\
+    do {                                        		\
+    int id = uarts[UART_3].base->IIR.IntId;         \
+        if (id == RDA_ID) {                     		\
+        	if(uarts[UART_3].rx_cb != 0)			\
+				uarts[UART_3].rx_cb(				\
+						uarts[UART_3].arg,			\
+						uarts[UART_3].base->RBR);	\
+        }                                       		\
+        if (id == THR_ID) {                     		\
+        	if(uarts[UART_3].tx_cb != 0)			\
+				uarts[UART_3].tx_cb(				\
+						uarts[UART_3].arg);       	\
+            uarts[UART_3].base->IER.THRE_IE = 0;    \
+        }                                       		\
+    } while (uarts[UART_3].base->IIR.IntStatus == 0);\
+    if (sched_context_switch_request) {					\
+    	thread_yield_higher();							\
+    }													\
 }
 
 struct uart_st {
@@ -119,11 +129,19 @@ struct uart_st1 {
     bool isBlocking;
 };
 
-struct uart_st uarts[4] = {
+struct uart_st uarts[] = {
+#ifdef UART_0_EN
     {&LPC_UART0},
+#endif
+#ifdef UART_1_EN
     {0},
+#endif
+#ifdef UART_2_EN
     {&LPC_UART2},
+#endif
+#ifdef UART_3_EN
     {&LPC_UART3},
+#endif
 };
 
 static void setBaudRate(uart_t uart, uint32_t baudrate) {
@@ -151,16 +169,25 @@ int uart_init(
 #ifdef UART_0_EN
     case UART_0:
         LPC_SYS_CTL.PCLKSEL1.PCLK_UART3 = UART_0_CCLKSEL;
+        LPC_SYS_CTL.PCONP.PCUART0 = 1;
+        NVIC_SetPriority(UART0_IRQn, UART_IRQ_PRIO);
+        NVIC_EnableIRQ(UART0_IRQn);
         break;
 #endif
 #ifdef UART_2_EN
     case UART_2:
         LPC_SYS_CTL.PCLKSEL1.PCLK_UART3 = UART_2_CCLKSEL;
+        LPC_SYS_CTL.PCONP.PCUART2 = 1;
+        NVIC_SetPriority(UART2_IRQn, UART_IRQ_PRIO);
+        NVIC_EnableIRQ(UART2_IRQn);
         break;
 #endif
 #ifdef UART_3_EN
     case UART_3:
         LPC_SYS_CTL.PCLKSEL1.PCLK_UART3 = UART_3_CCLKSEL;
+        LPC_SYS_CTL.PCONP.PCUART3 = 1;
+        NVIC_SetPriority(UART3_IRQn, UART_IRQ_PRIO);
+        NVIC_EnableIRQ(UART3_IRQn);
         break;
 #endif
     default: return -2;
@@ -181,6 +208,7 @@ int uart_init(
     uarts[uart].base->FCR.FIFO_EN = 1;
 
     uarts[uart].base->IER.RBR_IE = 1;
+    uarts[uart].base->IER.THRE_IE = 1;
 
     return 0;
 }
@@ -190,16 +218,19 @@ int uart_init_blocking(uart_t uart, uint32_t baudrate) {
 #ifdef UART_0_EN
     case UART_0:
         LPC_SYS_CTL.PCLKSEL1.PCLK_UART3 = UART_0_CCLKSEL;
+        LPC_SYS_CTL.PCONP.PCUART0 = 1;
         break;
 #endif
 #ifdef UART_2_EN
     case UART_2:
         LPC_SYS_CTL.PCLKSEL1.PCLK_UART3 = UART_2_CCLKSEL;
+        LPC_SYS_CTL.PCONP.PCUART2 = 1;
         break;
 #endif
 #ifdef UART_3_EN
     case UART_3:
         LPC_SYS_CTL.PCLKSEL1.PCLK_UART3 = UART_3_CCLKSEL;
+        LPC_SYS_CTL.PCONP.PCUART3 = 1;
         break;
 #endif
     default: return -2;
@@ -311,5 +342,24 @@ ISR_DECL(1)
 ISR_DECL(2)
 #endif
 #ifdef UART_3_EN
-ISR_DECL(3)
+void isr_uart3(void) {
+    do {
+    int id = uarts[UART_3].base->IIR.IntId;
+        if (id == RDA_ID) {
+        	if(uarts[UART_3].rx_cb != 0)
+				uarts[UART_3].rx_cb(
+						uarts[UART_3].arg,
+						uarts[UART_3].base->RBR);
+        }
+        if (id == THR_ID) {
+        	if(uarts[UART_3].tx_cb != 0)
+				uarts[UART_3].tx_cb(
+						uarts[UART_3].arg);
+            uarts[UART_3].base->IER.THRE_IE = 0;
+        }
+    } while (uarts[UART_3].base->IIR.IntStatus == 0);
+    if (sched_context_switch_request) {
+    	thread_yield_higher();
+    }
+}
 #endif

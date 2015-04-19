@@ -14,12 +14,16 @@
 #ifndef CPUVARS_H
 #define	CPUVARS_H
 
-#include <stdint.h>
-#include "cpuregs.h"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
+
+#include <stdint.h>
+#include "cpuregs.h"
+
+#define __MPU_PRESENT             1         /*!< MPU present or not                               */
+#define __NVIC_PRIO_BITS          5         /*!< Number of Bits used for Priority Levels          */
+#define __Vendor_SysTickConfig    0         /*!< Set to 1 if different SysTick Config is used     */
 
 /* IO definitions (access restrictions to peripheral registers) */
 #ifdef __cplusplus
@@ -79,6 +83,8 @@ typedef enum IRQn {
     CANActivity_IRQn = 34, /* CAN Activity interrupt                             */
 } IRQn_Type;
 
+#include "core_cm3.h"
+
 /* System control */
 typedef struct sys_ctl {
     // 0x400FC000u
@@ -86,9 +92,8 @@ typedef struct sys_ctl {
     union {
 
         struct {
-            __IO uint32_t PLLE0 : 1;
-            __IO uint32_t PLLC0 : 1;
-            __I uint32_t : 30;
+            __I uint32_t : 12;
+            __IO uint32_t FLASHTIM : 4;
         };
         __IO uint32_t REGISTER;
     } FLASHCFG;
@@ -178,7 +183,7 @@ typedef struct sys_ctl {
             __I uint32_t PLLE1_STAT : 1;
             __I uint32_t PLLC1_STAT : 1;
             __I uint32_t PLOCK0 : 1;
-            __I uint32_t : 22;
+            __I uint32_t : 21;
         };
         __I uint32_t REGISTER;
     } PLL1STAT;
@@ -418,7 +423,6 @@ typedef struct sys_ctl {
             __IO uint32_t PCLK_CAN1 : 2;
             __IO uint32_t PCLK_CAN2 : 2;
             __IO uint32_t PCLK_ACF : 2;
-            __IO uint32_t : 2;
         };
         __IO uint32_t REGISTER;
     } PCLKSEL0;
@@ -665,8 +669,22 @@ typedef union pinmodeod {
 #define LPC_PINMODE     (*((pinmode_t *)(PINCONNECT_BASE + PINMODE00_OFFSET)))
 #define LPC_PINMODEOD   (*((pinmodeod_t *)(PINCONNECT_BASE + PINMODEOD0_OFFSET)))
 
+/* GPIO block */
+typedef struct gpio {
+    __IO uint32_t FIODIR;
+    __IO uint32_t RESERVED[3];
+    __IO uint32_t FIOMASK;
+    __IO uint32_t FIOPIN;
+    __IO uint32_t FIOSET;
+    __IO uint32_t FIOCLR;
+} gpio_t;
+
+/* LPC_GPIO[x] */
+#define LPC_GPIO        ((gpio_t *)(GPIO_BASE))
+
+
 /* UARTs */
-typedef union uart {
+typedef struct uart {
 
     union {
 
@@ -727,86 +745,68 @@ typedef union uart {
         } FCR;
     };
 
-    union {
+	struct {
+		__IO uint32_t WORD_LEN : 2;
+		__IO uint32_t STOP_BIT : 1;
+		__IO uint32_t PARITY_EN : 1;
+		__IO uint32_t PARITY_SEL : 2;
+		__IO uint32_t BREAK_CTL : 1;
+		__IO uint32_t DLAB : 1;
+		__IO uint32_t : 24;
+	} LCR;
 
-        struct {
-            __IO uint32_t WORD_LEN : 2;
-            __IO uint32_t STOP_BIT : 1;
-            __IO uint32_t PARITY_EN : 1;
-            __IO uint32_t PARITY_SEL : 2;
-            __IO uint32_t BREAK_CTL : 1;
-            __IO uint32_t DLAB : 1;
-            __IO uint32_t : 24;
-        } LCR;
-    };
-    __I uint32_t RESERVED0;
+	__I uint32_t RESERVED0;
 
-    union {
+	struct {
+		__I uint32_t RDR : 1;
+		__I uint32_t OE : 1;
+		__I uint32_t PE : 1;
+		__I uint32_t FE : 1;
+		__I uint32_t BI : 1;
+		__I uint32_t THRE : 1;
+		__I uint32_t TEMT : 1;
+		__I uint32_t RXFE : 1;
+		__I uint32_t : 24;
+	} LSR;
 
-        struct {
-            __I uint32_t RDR : 1;
-            __I uint32_t OE : 1;
-            __I uint32_t PE : 1;
-            __I uint32_t FE : 1;
-            __I uint32_t BI : 1;
-            __I uint32_t THRE : 1;
-            __I uint32_t TEMT : 1;
-            __I uint32_t RXFE : 1;
-            __I uint32_t : 24;
-        } LSR;
-    };
     __I uint32_t RESERVED1;
 
-    union {
+	struct {
+		__IO uint32_t SCR : 8;
+		__IO uint32_t : 24;
+	};
 
-        struct {
-            __IO uint32_t SCR : 8;
-            __IO uint32_t : 24;
-        };
-    };
+	struct {
+		__IO uint32_t START : 1;
+		__IO uint32_t MODE : 1;
+		__IO uint32_t AUTORESTART : 1;
+		__IO uint32_t : 5;
+		__IO uint32_t ABEOIntClr : 1;
+		__IO uint32_t ABTOIntClr : 1;
+		__IO uint32_t : 22;
+	} ACR;
 
-    union {
+	struct {
+		__IO uint32_t IrDAEn : 1;
+		__IO uint32_t IrDAInv : 1;
+		__IO uint32_t FixPulseEn : 1;
+		__IO uint32_t PulseDiv : 3;
+		__IO uint32_t : 26;
+	} ICR;
 
-        struct {
-            __IO uint32_t START : 1;
-            __IO uint32_t MODE : 1;
-            __IO uint32_t AUTORESTART : 1;
-            __IO uint32_t : 5;
-            __IO uint32_t ABEOIntClr : 1;
-            __IO uint32_t ABTOIntClr : 1;
-            __IO uint32_t : 22;
-        } ACR;
-    };
+	struct {
+		__IO uint32_t DIVADDVAL : 4;
+		__IO uint32_t MULVAL : 4;
+		__IO uint32_t : 24;
+	} FDR;
 
-    union {
-
-        struct {
-            __IO uint32_t IrDAEn : 1;
-            __IO uint32_t IrDAInv : 1;
-            __IO uint32_t FixPulseEn : 1;
-            __IO uint32_t PulseDiv : 3;
-            __IO uint32_t : 26;
-        } ICR;
-    };
-
-    union {
-
-        struct {
-            __IO uint32_t DIVADDVAL : 4;
-            __IO uint32_t MULVAL : 4;
-            __IO uint32_t : 24;
-        } FDR;
-    };
     __I uint32_t RESERVED2;
 
-    union {
-
-        struct {
-            __IO uint32_t : 7;
-            __IO uint32_t TXEN : 1;
-            __IO uint32_t : 24;
-        } TER;
-    };
+	struct {
+		__IO uint32_t : 7;
+		__IO uint32_t TXEN : 1;
+		__IO uint32_t : 24;
+	} TER;
 } uartx_t;
 
 #define LPC_UART0       (*((uartx_t *) UART0_BASE))

@@ -15,18 +15,18 @@
 #include "cpuvars.h"
 #include <errno.h>
 
-#define _BLOCK(PIN_DEF) ((PIN_DEF).pin>>4)
-#define _PIN(PIN_DEF)   (0xff & (PIN_DEF).pin)
+#define _BLOCK(PIN_DEF) ((*PIN_DEF).pin>>4)
+#define _PIN(PIN_DEF)   (0xff & (*PIN_DEF).pin)
 
 
-void _pinblock_set_func(pinblock_t);
-void _pinblock_set_mode(pinblock_t);
-void _pinblock_set_mode_od(pinblock_t);
+void _pinblock_set_func(pinblock_t*);
+void _pinblock_set_mode(pinblock_t*);
+void _pinblock_set_mode_od(pinblock_t*);
 
 uint16_t pinblock_init(pinblock_t *config, uint16_t len) {
     for (; len > 0; len--) {
-        uint8_t block = _BLOCK(*config);
-        uint8_t pin = _PIN(*config);
+        uint8_t block = _BLOCK(config);
+        uint8_t pin = _PIN(config);
 
         switch (block) {
         case 0:
@@ -63,16 +63,16 @@ uint16_t pinblock_init(pinblock_t *config, uint16_t len) {
                 return ENXIO;
             }
 
-            _pinblock_set_func(*config);
+            _pinblock_set_func(config);
 
             config++;
 
             continue;
         }
 
-        _pinblock_set_func(*config);
-        _pinblock_set_mode(*config);
-        _pinblock_set_mode_od(*config);
+        _pinblock_set_func(config);
+        _pinblock_set_mode(config);
+        _pinblock_set_mode_od(config);
 
         config++;
     }
@@ -80,10 +80,10 @@ uint16_t pinblock_init(pinblock_t *config, uint16_t len) {
     return 0;
 }
 
-void _pinblock_set_func(pinblock_t config) {
+void _pinblock_set_func(pinblock_t *config) {
     uint8_t block = _BLOCK(config);
     uint8_t pin = _PIN(config);
-    uint32_t func = config.function;
+    uint32_t func = (*config).function;
     uint32_t mask = 0b11;
 
     func = func << (pin * 2);
@@ -131,10 +131,10 @@ void _pinblock_set_func(pinblock_t config) {
     }
 }
 
-void _pinblock_set_mode(pinblock_t config) {
+void _pinblock_set_mode(pinblock_t *config) {
     uint8_t block = _BLOCK(config);
     uint8_t pin = _PIN(config);
-    uint32_t mode = config.mode;
+    uint32_t mode = (*config).mode;
     uint32_t mask = 0b11;
 
     mode = mode << (pin * 2);
@@ -178,10 +178,10 @@ void _pinblock_set_mode(pinblock_t config) {
     }
 }
 
-void _pinblock_set_mode_od(pinblock_t config) {
+void _pinblock_set_mode_od(pinblock_t *config) {
     uint8_t block = _BLOCK(config);
     uint8_t pin = _PIN(config);
-    uint32_t od = config.opendrain;
+    uint32_t od = (*config).opendrain;
     uint32_t mask = 0b1;
 
     od = od << pin;
