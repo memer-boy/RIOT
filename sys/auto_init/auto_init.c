@@ -9,9 +9,10 @@
  *
  * @ingroup auto_init
  * @{
- * @file    auto_init_c
+ * @file
  * @brief   initializes any used module that has a trivial init function
  * @author  Oliver Hahm <oliver.hahm@inria.fr>
+ * @author  Hauke Petersen <hauke.petersen@fu-berlin.de>
  * @}
  */
 #include <stdint.h>
@@ -72,7 +73,7 @@
 #endif
 
 #ifdef MODULE_NET_IF
-#include "cpu-conf.h"
+#include "cpu_conf.h"
 #include "cpu.h"
 #include "kernel.h"
 #include "net_if.h"
@@ -82,12 +83,33 @@
 #include "periph/cpuid.h"
 #endif
 
+#ifdef MODULE_NG_SIXLOWPAN
+#include "net/ng_sixlowpan.h"
+#endif
+
+#ifdef MODULE_NG_IPV6
+#include "net/ng_ipv6.h"
+#endif
+
+#ifdef MODULE_NG_IPV6_NETIF
+#include "net/ng_ipv6/netif.h"
+#endif
+
 #ifdef MODULE_L2_PING
 #include "l2_ping.h"
 #endif
 
 #ifdef MODULE_NG_PKTDUMP
 #include "net/ng_pktdump.h"
+#endif
+
+#ifdef MODULE_NG_UDP
+#include "net/ng_udp.h"
+#endif
+
+#ifdef MODULE_DEV_ETH_AUTOINIT
+#include "net/dev_eth.h"
+#include "dev_eth_autoinit.h"
 #endif
 
 #define ENABLE_DEBUG (0)
@@ -146,8 +168,9 @@ void auto_init_net_if(void)
                                     CPUID_ID_LEN / 2 + 1);
 #endif /* CPUID_ID_LEN % 2 == 0 */
 
-        memcpy(&(eui64.uint32[0]), &hash_h, sizeof(uint32_t));
-        memcpy(&(eui64.uint32[1]), &hash_l, sizeof(uint32_t));
+        eui64.uint32[1] = hash_l;
+        eui64.uint32[0] = hash_h;
+
         /* Set Local/Universal bit to Local since this EUI64 is made up. */
         eui64.uint8[0] |= 0x02;
         net_if_set_eui64(iface, &eui64);
@@ -279,5 +302,47 @@ void auto_init(void)
 #ifdef MODULE_NG_PKTDUMP
     DEBUG("Auto init ng_pktdump module.\n");
     ng_pktdump_init();
+#endif
+#ifdef MODULE_NG_SIXLOWPAN
+    DEBUG("Auto init ng_sixlowpan module.\n");
+    ng_sixlowpan_init();
+#endif
+#ifdef MODULE_NG_IPV6
+    DEBUG("Auto init ng_ipv6 module.\n");
+    ng_ipv6_init();
+#endif
+#ifdef MODULE_NG_UDP
+    DEBUG("Auto init UDP module.\n");
+    ng_udp_init();
+#endif
+
+
+/* initialize network devices */
+#ifdef MODULE_AUTO_INIT_NG_NETIF
+
+#ifdef MODULE_NG_AT86RF2XX
+    extern void auto_init_ng_at86rf2xx(void);
+    auto_init_ng_at86rf2xx();
+#endif
+
+#ifdef MODULE_XBEE
+    extern void auto_init_xbee(void);
+    auto_init_xbee();
+#endif
+
+#ifdef MODULE_KW2XRF
+    extern void auto_init_kw2xrf(void);
+    auto_init_kw2xrf();
+#endif
+
+#ifdef MODULE_NG_NETDEV_ETH
+    extern void auto_init_ng_netdev_eth(void);
+    auto_init_ng_netdev_eth();
+#endif
+
+#endif /* MODULE_AUTO_INIT_NG_NETIF */
+
+#ifdef MODULE_NG_IPV6_NETIF
+    ng_ipv6_netif_init_by_dev();
 #endif
 }

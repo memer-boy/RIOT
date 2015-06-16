@@ -10,7 +10,7 @@
  * @ingroup     cpu_stm32l1
  * @{
  *
- * @file        startup.c
+ * @file
  * @brief       Startup code and interrupt vector definition
  *
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
@@ -20,7 +20,7 @@
  */
 
 #include <stdint.h>
-#include "crash.h"
+#include "panic.h"
 
 
 /**
@@ -82,8 +82,7 @@ void reset_handler(void)
  */
 void dummy_handler(void)
 {
-    core_panic(DUMMY_HANDLER, "DUMMY HANDLER");
-    while (1) {asm ("nop");}
+    core_panic(PANIC_DUMMY_HANDLER, "DUMMY HANDLER");
 }
 
 void isr_nmi(void)
@@ -103,19 +102,19 @@ void isr_debug_mon(void)
 
 void isr_hard_fault(void)
 {
-    core_panic(HARD_FAULT, "HARD FAULT");
+    core_panic(PANIC_HARD_FAULT, "HARD FAULT");
     while (1) {asm ("nop");}
 }
 
 void isr_bus_fault(void)
 {
-    core_panic(BUS_FAULT, "BUS FAULT");
+    core_panic(PANIC_BUS_FAULT, "BUS FAULT");
     while (1) {asm ("nop");}
 }
 
 void isr_usage_fault(void)
 {
-    core_panic(USAGE_FAULT, "USAGE FAULT");
+    core_panic(PANIC_USAGE_FAULT, "USAGE FAULT");
     while (1) {asm ("nop");}
 }
 

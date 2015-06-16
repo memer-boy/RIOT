@@ -10,13 +10,13 @@
  * @addtogroup  unittests
  * @{
  *
- * @file        tests-ipv6_nc.h
+ * @file
  * @brief       Unittests for the ``ipv6_nc`` module
  *
  * @author      Martine Lenders <mlenders@inf.fu-berlin.de>
  */
-#ifndef TESTS_NETREG_H_
-#define TESTS_NETREG_H_
+#ifndef TESTS_IPV6_NC_H_
+#define TESTS_IPV6_NC_H_
 
 #include "embUnit.h"
 
@@ -33,5 +33,5 @@ void tests_ipv6_nc(void);
 }
 #endif
 
-#endif /* TESTS_NETREG_H_ */
+#endif /* TESTS_IPV6_NC_H_ */
 /** @} */

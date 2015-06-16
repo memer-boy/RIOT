@@ -31,7 +31,7 @@
 #define MAXCOUNT 100
 #define MAXDIFF 10000
 
-char timer_stack[KERNEL_CONF_STACKSIZE_MAIN*4];
+char timer_stack[THREAD_STACKSIZE_MAIN*4];
 
 struct timer_msg {
     vtimer_t timer;
@@ -87,6 +87,8 @@ void *timer_thread(void *arg)
             printf("WARNING: timer difference %" PRId64 "us exceeds MAXDIFF(%d)!\n", diff, MAXDIFF);
         }
 
+        vtimer_set_msg(&tmsg->timer, tmsg->interval, thread_getpid(), MSG_TIMER, tmsg);
+
         if (tmsg->count >= MAXCOUNT) {
             printf("Maximum count reached. (%d) Exiting.\n", MAXCOUNT);
             break;
@@ -102,7 +104,7 @@ int main(void)
     kernel_pid_t pid = thread_create(
                   timer_stack,
                   sizeof(timer_stack),
-                  PRIORITY_MAIN - 1,
+                  THREAD_PRIORITY_MAIN - 1,
                   CREATE_STACKTEST,
                   timer_thread,
                   NULL,

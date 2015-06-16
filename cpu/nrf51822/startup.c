@@ -10,7 +10,7 @@
  * @ingroup     cpu_nrf51822
  * @{
  *
- * @file        startup.c
+ * @file
  * @brief       Startup code and interrupt vector definition
  *
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
@@ -22,7 +22,7 @@
 
 #include "board.h"
 #include "cpu.h"
-#include "crash.h"
+#include "panic.h"
 
 /**
  * memory markers as defined in the linker script
@@ -88,17 +88,17 @@ void reset_handler(void)
  */
 void dummy_handler(void)
 {
-    core_panic(DUMMY_HANDLER, "DUMMY ISR HANDLER");
+    core_panic(PANIC_DUMMY_HANDLER, "DUMMY ISR HANDLER");
 }
 
 void isr_nmi(void)
 {
-    core_panic(NMI_HANDLER, "NMI HANDLER");
+    core_panic(PANIC_NMI_HANDLER, "NMI HANDLER");
 }
 
 void isr_hard_fault(void)
 {
-    core_panic(HARD_FAULT, "HARD FAULT");
+    core_panic(PANIC_HARD_FAULT, "HARD FAULT");
 }
 
 /* Cortex-M specific interrupt vectors */

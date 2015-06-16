@@ -23,13 +23,9 @@
 #include <string.h>
 
 #include "xbee.h"
-#include "mutex.h"
 #include "hwtimer.h"
 #include "msg.h"
-#include "periph/uart.h"
-#include "periph/gpio.h"
 #include "periph/cpuid.h"
-#include "net/ng_netbase.h"
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -292,6 +288,26 @@ static int _set_addr(xbee_t *dev, uint8_t *val, size_t len)
     return -ECANCELED;
 }
 
+static int _set_addr_len(xbee_t *dev, uint16_t *val, size_t len)
+{
+    if (len != sizeof(uint16_t)) {
+        return -EOVERFLOW;
+    }
+
+    switch (*val) {
+        case 8:
+            dev->addr_flags |= XBEE_ADDR_FLAGS_LONG;
+            break;
+        case 2:
+            dev->addr_flags &= ~XBEE_ADDR_FLAGS_LONG;
+            break;
+        default:
+            return -EINVAL;
+    }
+
+    return sizeof(uint16_t);
+}
+
 static int _get_channel(xbee_t *dev, uint8_t *val, size_t max)
 {
     uint8_t cmd[2];
@@ -327,17 +343,6 @@ static int _set_channel(xbee_t *dev, uint8_t *val, size_t len)
         return 2;
     }
     return -EINVAL;
-}
-
-static int _get_max_packet_size(xbee_t *dev, uint16_t *val, size_t max)
-{
-    if (max < 2) {
-        return -EOVERFLOW;
-    }
-
-    *val = XBEE_MAX_PAYLOAD_LENGTH;
-
-    return 2;
 }
 
 static int _get_panid(xbee_t *dev, uint8_t *val, size_t max)
@@ -418,6 +423,7 @@ int xbee_init(xbee_t *dev, uart_t uart, uint32_t baudrate,
     dev->reset_pin = reset_pin;
     dev->sleep_pin = sleep_pin;
     /* set default options */
+    dev->addr_flags = 0;
     dev->proto = XBEE_DEFAULT_PROTOCOL;
     dev->options = 0;
     /* initialize buffers and locks*/
@@ -430,22 +436,22 @@ int xbee_init(xbee_t *dev, uart_t uart, uint32_t baudrate,
         DEBUG("xbee: Error initializing UART\n");
         return -ENXIO;
     }
-    if (reset_pin < GPIO_NUMOF) {
-        if (gpio_init_out(reset_pin, GPIO_NOPULL) < 0) {
+    if (reset_pin != GPIO_UNDEF) {
+        if (gpio_init(reset_pin, GPIO_DIR_OUT, GPIO_NOPULL) < 0) {
             DEBUG("xbee: Error initializing RESET pin\n");
             return -ENXIO;
         }
         gpio_set(reset_pin);
     }
-    if (sleep_pin < GPIO_NUMOF) {
-        if (gpio_init_out(sleep_pin, GPIO_NOPULL) < 0) {
+    if (sleep_pin != GPIO_UNDEF) {
+        if (gpio_init(sleep_pin, GPIO_DIR_OUT, GPIO_NOPULL) < 0) {
             DEBUG("xbee: Error initializing SLEEP pin\n");
             return -ENXIO;
         }
         gpio_clear(sleep_pin);
     }
     /* if reset pin is connected, do a hardware reset */
-    if (reset_pin < GPIO_NUMOF) {
+    if (reset_pin != GPIO_UNDEF) {
         gpio_clear(reset_pin);
         hwtimer_wait(HWTIMER_TICKS(RESET_DELAY));
         gpio_set(reset_pin);
@@ -463,28 +469,10 @@ int xbee_init(xbee_t *dev, uart_t uart, uint32_t baudrate,
     /* exit command mode */
     _at_cmd(dev, "ATCN\r");
 
-    /* set default short address, use CPU ID if available */
-#if CPUID_ID_LEN
-    /* get CPU ID */
-    uint8_t id[CPUID_ID_LEN];
-    cpuid_get(id);
-    /* compress to 2 byte */
-    memset(dev->addr_short, 0, 2);
-    int i;
-    for (i = 0; i < (CPUID_ID_LEN / 2); i++) {
-        dev->addr_short[0] ^= id[i];
-    }
-    for (; i < CPUID_ID_LEN; i++) {
-        dev->addr_short[1] ^= id[i];
-    }
-#else
-    dev->addr_short[0] = (uint8_t)(XBEE_DEFAULT_SHORT_ADDR >> 8);
-    dev->addr_short[1] = (uint8_t)(XBEE_DEFAULT_SHORT_ADDR);
-#endif
-    _set_addr(dev, dev->addr_short, 2);
     /* load long address (we can not set it, its read only for Xbee devices) */
-    _get_addr_long(dev, dev->addr_long, 8);
+    _get_addr_long(dev, dev->addr_long.uint8, 8);
     /* set default channel */
+    _set_addr(dev, &((dev->addr_long).uint8[6]), 2);
     tmp[1] = 0;
     tmp[0] = XBEE_DEFAULT_CHANNEL;
     _set_channel(dev, tmp, 2);
@@ -558,7 +546,7 @@ static int _send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
         dev->tx_buf[1] = (uint8_t)((size + 11) >> 8);
         dev->tx_buf[2] = (uint8_t)(size + 11);
         dev->tx_buf[3] = API_ID_TX_LONG_ADDR;
-        memcpy(dev->tx_buf + 11, ng_netif_hdr_get_dst_addr(hdr), 8);
+        memcpy(dev->tx_buf + 5, ng_netif_hdr_get_dst_addr(hdr), 8);
         pos = 13;
     }
     /* set options */
@@ -620,10 +608,26 @@ static int _get(ng_netdev_t *netdev, ng_netconf_opt_t opt,
             return _get_addr_short(dev, (uint8_t *)value, max_len);
         case NETCONF_OPT_ADDRESS_LONG:
             return _get_addr_long(dev, (uint8_t *)value, max_len);
+        case NETCONF_OPT_ADDR_LEN:
+        case NETCONF_OPT_SRC_LEN:
+            if (max_len < sizeof(uint16_t)) {
+                return -EOVERFLOW;
+            }
+            if (dev->addr_flags & XBEE_ADDR_FLAGS_LONG) {
+                *((uint16_t *)value) = 8;
+            }
+            else {
+                *((uint16_t *)value) = 2;
+            }
+            return sizeof(uint16_t);
         case NETCONF_OPT_CHANNEL:
             return _get_channel(dev, (uint8_t *)value, max_len);
         case NETCONF_OPT_MAX_PACKET_SIZE:
-            return _get_max_packet_size(dev, (uint16_t *)value, max_len);
+            if (max_len < sizeof(uint16_t)) {
+                return -EOVERFLOW;
+            }
+            *((uint16_t *)value) = XBEE_MAX_PAYLOAD_LENGTH;
+            return sizeof(uint16_t);
         case NETCONF_OPT_NID:
             return _get_panid(dev, (uint8_t *)value, max_len);
         case NETCONF_OPT_PROTO:
@@ -644,6 +648,9 @@ static int _set(ng_netdev_t *netdev, ng_netconf_opt_t opt,
     switch (opt) {
         case NETCONF_OPT_ADDRESS:
             return _set_addr(dev, (uint8_t *)value, value_len);
+        case NETCONF_OPT_ADDR_LEN:
+        case NETCONF_OPT_SRC_LEN:
+            return _set_addr_len(dev, value, value_len);
         case NETCONF_OPT_CHANNEL:
             return _set_channel(dev, (uint8_t *)value, value_len);
         case NETCONF_OPT_NID:
@@ -696,7 +703,7 @@ static void _isr_event(ng_netdev_t *netdev, uint32_t event_type)
     /* allocate and fill interface header */
     pkt_head = ng_pktbuf_add(NULL, NULL,
                              sizeof(ng_netif_hdr_t) + (2 * addr_len),
-                             NG_NETTYPE_UNDEF);
+                             NG_NETTYPE_NETIF);
     if (pkt_head == NULL) {
         DEBUG("xbee: Error allocating netif header in packet buffer on RX\n");
         dev->rx_count = 0;
@@ -713,7 +720,7 @@ static void _isr_event(ng_netdev_t *netdev, uint32_t event_type)
         ng_netif_hdr_set_dst_addr(hdr, dev->addr_short, 2);
     }
     else {
-        ng_netif_hdr_set_dst_addr(hdr, dev->addr_long, 8);
+        ng_netif_hdr_set_dst_addr(hdr, dev->addr_long.uint8, 8);
     }
     pos = 3 + addr_len;
     /* allocate and copy payload */

@@ -9,7 +9,7 @@
  *
  * @ingroup sixlowpan
  * @{
- * @file    sixlowpan.c
+ * @file
  * @brief   6lowpan functions
  * @author  Stephan Zeisberg <zeisberg@mi.fu-berlin.de>
  * @author  Martine Lenders <mlenders@inf.fu-berlin.de>
@@ -52,8 +52,8 @@ static char addr_str[IPV6_MAX_ADDR_STR_LEN];
 #endif
 #include "debug.h"
 
-#define CON_STACKSIZE                   (KERNEL_CONF_STACKSIZE_DEFAULT)
-#define LOWPAN_TRANSFER_BUF_STACKSIZE   (KERNEL_CONF_STACKSIZE_DEFAULT)
+#define CON_STACKSIZE                   (THREAD_STACKSIZE_DEFAULT)
+#define LOWPAN_TRANSFER_BUF_STACKSIZE   (THREAD_STACKSIZE_DEFAULT)
 
 #define SIXLOWPAN_MAX_REGISTERED        (4)
 
@@ -1107,7 +1107,8 @@ uint8_t lowpan_iphc_encoding(int if_id, const uint8_t *dest, int dest_len,
             else if (ipv6_buf->destaddr.uint32[2] == HTONL(0x000000ff) &&
                      ipv6_buf->destaddr.uint16[6] == HTONS(0xfe00)) {
                 if (dest_len == 2 &&
-                    ipv6_buf->destaddr.uint16[7] == *((uint16_t *) dest)) {
+                    ipv6_buf->destaddr.uint8[14] == dest[0] &&
+                    ipv6_buf->destaddr.uint8[15] == dest[1]) {
                     /* 0 bits. The address is derived using context information
                      * and possibly the link-layer addresses.*/
                     lowpan_iphc[1] |= 0x03;
@@ -1747,7 +1748,7 @@ int sixlowpan_lowpan_init(void)
 
     if (ip_process_pid == KERNEL_PID_UNDEF) {
         ip_process_pid = thread_create(ip_process_buf, IP_PROCESS_STACKSIZE,
-                                       PRIORITY_MAIN - 1, CREATE_STACKTEST,
+                                       THREAD_PRIORITY_MAIN - 1, CREATE_STACKTEST,
                                        ipv6_process, NULL, "ip_process");
     }
 
@@ -1758,7 +1759,7 @@ int sixlowpan_lowpan_init(void)
     nbr_cache_auto_rem();
 
     contexts_rem_pid = thread_create(con_buf, CON_STACKSIZE,
-                                     PRIORITY_MAIN + 1, CREATE_STACKTEST,
+                                     THREAD_PRIORITY_MAIN + 1, CREATE_STACKTEST,
                                      lowpan_context_auto_remove, NULL, "lowpan_context_rem");
 
     if (contexts_rem_pid == KERNEL_PID_UNDEF) {
@@ -1766,7 +1767,7 @@ int sixlowpan_lowpan_init(void)
     }
 
     transfer_pid = thread_create(lowpan_transfer_buf, LOWPAN_TRANSFER_BUF_STACKSIZE,
-                                 PRIORITY_MAIN - 1, CREATE_STACKTEST,
+                                 THREAD_PRIORITY_MAIN - 1, CREATE_STACKTEST,
                                  lowpan_transfer, NULL, "lowpan_transfer");
 
     if (transfer_pid == KERNEL_PID_UNDEF) {
