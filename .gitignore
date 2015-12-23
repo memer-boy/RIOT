@@ -32,16 +32,6 @@ tags
 # Eclipse symbol file (output from make eclipsesym)
 eclipsesym.xml
 /toolchain
-<<<<<<< HEAD
-/nbproject/
-/cpu/lpc1769/include/bus_defs.h
-/cpu/lpc1769/include/bus_funcs.h
-/cpu/lpc1769/bus_space.c
-/cpu/lpc1769/periph/cpuid.c
-/cpu/lpc1769/sys/include/device.h
-/cpu/lpc1769/sys/include/
-/cpu/lpc1769/sys/
-=======
 # Ignore created Arduino sketch files
 _sketches.cpp
 
@@ -62,4 +52,12 @@ pkg/wakaama/wakaama
 
 # Vagrant
 .vagrant
->>>>>>> upstream/master
+
+/nbproject/
+/cpu/lpc1769/include/bus_defs.h
+/cpu/lpc1769/include/bus_funcs.h
+/cpu/lpc1769/bus_space.c
+/cpu/lpc1769/periph/cpuid.c
+/cpu/lpc1769/sys/include/device.h
+/cpu/lpc1769/sys/include/
+/cpu/lpc1769/sys/
