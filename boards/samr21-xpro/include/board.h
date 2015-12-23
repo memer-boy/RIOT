@@ -19,8 +19,8 @@
  * @author      Thomas Eichinger <thomas.eichinger@fu-berlin.de>
  */
 
-#ifndef __BOARD_H
-#define __BOARD_H
+#ifndef BOARD_H_
+#define BOARD_H_
 
 #include "cpu.h"
 #include "periph_conf.h"
@@ -38,41 +38,29 @@ extern "C" {
 /**
  * Assign the hardware timer
  */
-#define HW_TIMER            TIMER_1
-
-/**
-* @name NG_AT86RF233 configuration
-* @{
-*/
-#define NG_AT86RF233_SPI        (SPI_0)
-#define NG_AT86RF233_CS         GPIO(PB, 31)
-#define NG_AT86RF233_INT        GPIO(PB, 0)
-#define NG_AT86RF233_RESET      GPIO(PB, 15)
-#define NG_AT86RF233_SLEEP      GPIO(PA, 20)
-#define NG_AT86RF233_SPI_CLK    (SPI_SPEED_1MHZ)
-/** @}*/
-
-/**
-* @name AT86RF231 config
-* @{
-*/
-#define AT86RF231_SPI      SPI_0
-#define AT86RF231_CS       GPIO(PB, 31)
-#define AT86RF231_INT      GPIO(PB, 0)
-#define AT86RF231_RESET    GPIO(PB, 15)
-#define AT86RF231_SLEEP    GPIO(PA, 20)
-
-#define AT86RF231_SPI_SPEED SPI_SPEED_1MHZ
-/** @} */
+#define XTIMER              TIMER_1
+#define XTIMER_CHAN         (0)
 
 /**
  * @name Define UART device and baudrate for stdio
  * @{
  */
-#define STDIO               UART_0
+#define STDIO               UART_DEV(0)
 #define STDIO_BAUDRATE      (115200U)
 #define STDIO_RX_BUFSIZE    (64U)
 /** @} */
+
+/**
+ * @name AT86RF233 configuration
+ *
+ * {spi bus, spi speed, cs pin, int pin, reset pin, sleep pin}
+ */
+#define AT86RF2XX_PARAMS_BOARD      {.spi = SPI_0, \
+                                     .spi_speed = SPI_SPEED_5MHZ, \
+                                     .cs_pin = GPIO_PIN(PB, 31), \
+                                     .int_pin = GPIO_PIN(PB, 0), \
+                                     .sleep_pin = GPIO_PIN(PA, 20), \
+                                     .reset_pin = GPIO_PIN(PB, 15)}
 
 /**
  * @name LED pin definitions
@@ -80,6 +68,7 @@ extern "C" {
  */
 #define LED_PORT            PORT->Group[0]
 #define LED_PIN             (19)
+#define LED_GPIO            GPIO_PIN(0, 19)
 /** @} */
 
 /**
@@ -103,11 +92,6 @@ extern "C" {
 /** @} */
 
 /**
- * @brief Define the type for the radio packet length for the transceiver
- */
-typedef uint8_t radio_packet_length_t;
-
-/**
  * @brief Initialize board specific hardware, including clock, LEDs and std-IO
  */
 void board_init(void);
@@ -116,5 +100,5 @@ void board_init(void);
 }
 #endif
 
-#endif /** __BOARD_H */
+#endif /* BOARD_H_ */
 /** @} */

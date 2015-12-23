@@ -43,7 +43,7 @@ extern "C" {
 #define PCLKSEL0_OFFSET     0x000001A8u
 #define PCLKSEL1_OFFSET     0x000001ACu
 #define CLKOUTCFG_OFFSET    0x000001C8u
-    
+
 /* Timers */
 #define T0_BASE             0x40004000u
 #define T1_BASE             0x40008000u
@@ -154,6 +154,24 @@ extern "C" {
 #define ADRMATCH_OFFSET     0x00000050u
 #define RS485DLY_OFFSET     0x00000054u
 
+/* SPI registers */
+#define SPI0_BASE           0x40020000u
+#define S0SPCR_OFFSET       0x00000000u
+#define S0SPSR_OFFSET       0x00000004u
+#define S0SPDR_OFFSET       0x00000008u
+#define S0SPCCR_OFFSET      0x0000000Cu
+#define S0SPINT_OFFSET      0x0000001Cu
+    
+/* GPDMA registers */
+#define GPDMAC_BASE         0x50004000u
+#define GPDMACH0_BASE       0x50004100u
+#define GPDMACH1_BASE       0x50004120U
+#define GPDMACH2_BASE       0x50004140U
+#define GPDMACH3_BASE       0x50004160U
+#define GPDMACH4_BASE       0x50004180U
+#define GPDMACH5_BASE       0x500041A0U
+#define GPDMACH6_BASE       0x500041C0U
+#define GPDMACH7_BASE       0x500041E0U
 #ifdef	__cplusplus
 }
 #endif

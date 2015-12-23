@@ -52,6 +52,11 @@ extern "C" {
 #define BOARD_UART0         UART_3
 #define UART_IRQ_PRIO       1
 
+/* SPIs */
+#define SPI_NUMOF           1
+#define SPI_0_EN            1
+#define SPI_0_CS            1
+
 #ifdef	__cplusplus
 }
 #endif

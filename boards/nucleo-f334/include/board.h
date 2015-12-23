@@ -45,11 +45,6 @@ extern "C" {
 /** @} */
 
 /**
- * @name Assign the hardware timer
- */
-#define HW_TIMER            TIMER_0
-
-/**
  * @name LED pin definitions
  * @{
  */
@@ -75,9 +70,12 @@ extern "C" {
 /** @} */
 
 /**
- * @name Define the type for the radio packet length for the transceiver
+ * @name xtimer tuning values
+ * @{
  */
-typedef uint8_t radio_packet_length_t;
+#define XTIMER_OVERHEAD     5
+#define XTIMER_SHOOT_EARLY  2
+/** @} */
 
 /**
  * @brief Initialize board specific hardware, including clock, LEDs and std-IO

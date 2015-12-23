@@ -18,8 +18,8 @@
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
  */
 
-#ifndef __BOARD_H
-#define __BOARD_H
+#ifndef BOARD_H_
+#define BOARD_H_
 
 #include "cpu.h"
 #include "periph/gpio.h"
@@ -32,11 +32,6 @@
  * @name The nominal CPU core clock in this board
  */
 #define F_CPU               (32000000UL)
-
-/**
- * @name Assign the peripheral timer to be used as hardware timer
- */
-#define HW_TIMER            TIMER_0
 
 /**
  * @name Assign the UART interface to be used for stdio
@@ -88,5 +83,5 @@ void board_init(void);
 } /* end extern "C" */
 #endif
 
-#endif /** __BOARD_H */
+#endif /* BOARD_H_ */
 /** @} */

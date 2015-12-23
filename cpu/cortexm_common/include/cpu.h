@@ -22,17 +22,17 @@
  *
  * @author      Stefan Pfeiffer <stefan.pfeiffer@fu-berlin.de>
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
- * @author      Joakim Gebart <joakim.gebart@eistec.se>
+ * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se>
+ *
+ * @todo        remove include irq.h once core was adjusted
  */
 
 #ifndef CPU_H_
 #define CPU_H_
 
-#include "cpu_conf.h"
+#include <stdio.h>
 
-/*
- * TODO: remove once core was adjusted
- */
+#include "cpu_conf.h"
 #include "irq.h"
 
 #ifdef __cplusplus
@@ -49,8 +49,8 @@ extern "C" {
  * If needed, you can overwrite these values the the `cpu_conf.h` file of the
  * specific CPU implementation.
  *
- * TODO: Adjust values for Cortex-M4F with FPU?
- * TODO: Configure second set if no newlib nano.specs are available?
+ * @todo Adjust values for Cortex-M4F with FPU?
+ * @todo Configure second set if no newlib nano.specs are available?
  * @{
  */
 #ifndef THREAD_EXTRA_STACKSIZE_PRINTF
@@ -65,22 +65,12 @@ extern "C" {
 /** @} */
 
 /**
- * @brief   UART0 buffer size definition for compatibility reasons
- *
- * TODO: remove once the remodeling of the uart0 driver is done
+ * @brief   Stack size used for the exception (ISR) stack
  * @{
  */
-#ifndef UART0_BUFSIZE
-#define UART0_BUFSIZE                   (128)
+#ifndef ISR_STACKSIZE
+#define ISR_STACKSIZE                   (512U)
 #endif
-/** @} */
-
-/**
- * @brief   Deprecated interrupt control function for backward compatibility
- * @{
- */
-#define eINT                            enableIRQ
-#define dINT                            disableIRQ
 /** @} */
 
 /**
@@ -93,22 +83,6 @@ extern "C" {
 #endif
 
 /**
- * @brief Definition of available panic modes
- */
-typedef enum {
-    PANIC_NMI_HANDLER,       /**< non maskable interrupt */
-    PANIC_HARD_FAULT,        /**< hard fault */
-#if defined(CPU_ARCH_CORTEX_M3) || defined(CPU_ARCH_CORTEX_M4) || \
-    defined(CPU_ARCH_CORTEX_M4F)
-    PANIC_MEM_MANAGE,        /**< memory controller interrupt */
-    PANIC_BUS_FAULT,         /**< bus fault */
-    PANIC_USAGE_FAULT,       /**< undefined instruction or unaligned access */
-    PANIC_DEBUG_MON,         /**< debug interrupt */
-#endif
-    PANIC_DUMMY_HANDLER,     /**< unhandled interrupt */
-} panic_t;
-
-/**
  * @brief   Initialization of the CPU
  */
 void cpu_init(void);
@@ -117,6 +91,16 @@ void cpu_init(void);
  * @brief   Initialize Cortex-M specific core parts of the CPU
  */
 void cortexm_init(void);
+
+/**
+ * @brief   Prints the current content of the link register (lr)
+ */
+static inline void cpu_print_last_instruction(void)
+{
+    register uint32_t *lr_ptr;
+    __asm__ __volatile__("mov %0, lr" : "=r"(lr_ptr));
+    printf("%p\n", (void*) lr_ptr);
+}
 
 #ifdef __cplusplus
 }

@@ -26,11 +26,10 @@
 #define RIOT_CHRONO_HPP
 
 #include <chrono>
-#include <cstdio>
 #include <algorithm>
 
 #include "time.h"
-#include "vtimer.h"
+#include "xtimer.h"
 
 namespace riot {
 
@@ -100,7 +99,7 @@ class time_point {
  */
 inline time_point now() {
   timex_t tp;
-  vtimer_now(&tp);
+  xtimer_now_timex(&tp);
   return time_point(std::move(tp));
 }
 

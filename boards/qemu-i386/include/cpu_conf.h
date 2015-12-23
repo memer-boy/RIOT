@@ -16,8 +16,8 @@
  * @author      René Kijewski <rene.kijewski@fu-berlin.de>
  */
 
-#ifndef __RIOT__BOARDS__QEMU_I386__CPU_CONF__H
-#define __RIOT__BOARDS__QEMU_I386__CPU_CONF__H
+#ifndef QEMU_I386_CPU_CONF_H_
+#define QEMU_I386_CPU_CONF_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,8 +30,6 @@ extern "C" {
 #define THREAD_EXTRA_STACKSIZE_PRINTF            (8192)
 #define THREAD_EXTRA_STACKSIZE_PRINTF_FLOAT      (8192)
 #define THREAD_STACKSIZE_MINIMUM                 (8192)
-
-#define UART0_BUFSIZE                      (16)
 
 #define F_CPU (1000000) /* This value is unused in x86 */
 

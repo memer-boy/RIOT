@@ -1,5 +1,5 @@
 /*
- * Copyright 2009, Freie Universitaet Berlin (FUB). All rights reserved.
+ * Copyright 2009, 2015 Freie Universität Berlin
  *
  * This file is subject to the terms and conditions of the GNU Lesser
  * General Public License v2.1. See the file LICENSE in the top level
@@ -16,19 +16,40 @@
  * @brief       Basic definitions for the MSB-430H board
  *
  * @author      Freie Universität Berlin, Computer Systems & Telematics, FeuerWhere project
+ * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
  */
 
-#ifndef _MSB_BOARD_H
-#define _MSB_BOARD_H
+#ifndef MSB_BOARD_H_
+#define MSB_BOARD_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// for correct inclusion of <msp430.h>
+/* for correct inclusion of <msp430.h> */
 #ifndef __MSP430F1612__
 #define __MSP430F1612__
 #endif
+
+/**
+ * @brief   Xtimer configuration
+ * @{
+ */
+#define XTIMER                      (0)
+#define XTIMER_CHAN                 (0)
+#define XTIMER_MASK                 (0xffff0000)
+#define XTIMER_SHIFT_ON_COMPARE     (4)
+#define XTIMER_BACKOFF              (40)
+/** @} */
+
+/**
+ * @brief   Standard input/output device configuration
+ * @{
+ */
+#define STDIO                       (0)
+#define STDIO_BAUDRATE              (115200U)
+#define STDIO_RX_BUFSIZE            (64U)
+/** @} */
 
 //MSB430 core
 #define MSP430_INITIAL_CPU_SPEED    7372800uL
@@ -54,7 +75,5 @@ extern "C" {
 
 #include "board-conf.h"
 
-typedef uint8_t radio_packet_length_t;
-
 /** @} */
-#endif // _MSB_BOARD_H
+#endif /* MSB_BOARD_H_ */

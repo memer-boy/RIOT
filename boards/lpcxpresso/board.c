@@ -18,17 +18,13 @@
 #include "bitarithm.h"
 #include "cpu.h"
 
-#define PCUART3     (BIT25)
 #define PCGPIO      (BIT15)
 
 static pinblock_t connect[] = {
-//    CONNECT(PIN(0, 22), DEFAULT, ONCHIP_PULLDOWN, NORMAL), // LED2
+    CONNECT(PIN(0, 22), DEFAULT, ONCHIP_PULLDOWN, NORMAL), // LED2
     CONNECT(PIN(0, 0), ALTERN2, ONCHIP_PULLUP, NORMAL), // TXD3
     CONNECT(PIN(0, 1), ALTERN2, ONCHIP_PULLUP, NORMAL), // RXD3
     CONNECT(PIN(0, 15), ALTERN2, ONCHIP_PULLDOWN, NORMAL), // SCK0
-    CONNECT(PIN(0, 16), ALTERN2, ONCHIP_PULLUP, NORMAL), // SSEL0
-    CONNECT(PIN(0, 17), ALTERN2, ONCHIP_PULLDOWN, NORMAL), // MISO0
-    CONNECT(PIN(0, 18), ALTERN2, ONCHIP_PULLDOWN, NORMAL) // MOSI0
 };
 
 void board_init(void) {
@@ -53,13 +49,13 @@ void board_init(void) {
     LPC_SYS_CTL.PLL0FEED = 0x55;
 
     /* Temporal settings to setup PLL */
-    
+
     LPC_SYS_CTL.CCLKCFG.CCLKSEL = 0;
     LPC_SYS_CTL.SCS.OSCRANGE = 1;
     LPC_SYS_CTL.SCS.OSCEN = 1;
-    
-    while(LPC_SYS_CTL.SCS.OSCSTAT != 1);
-    
+
+    while (LPC_SYS_CTL.SCS.OSCSTAT != 1);
+
     LPC_SYS_CTL.CLKSRCSEL.CLKSRC = CLK_SRC;
     LPC_SYS_CTL.PLL0CFG.MSEL0 = PLL0_M_VAL;
     LPC_SYS_CTL.PLL0CFG.NSEL0 = PLL0_N_VAL;
@@ -76,7 +72,7 @@ void board_init(void) {
     LPC_SYS_CTL.USBCLKCFG.USBSEL = USBSEL_VAL;
 
     while (LPC_SYS_CTL.PLL0STAT.PLOCK0 != 1);
-    
+
     LPC_SYS_CTL.PLL0CON.PLLC0 = 1;
 
     LPC_SYS_CTL.PLL0FEED = 0xAA;
@@ -90,15 +86,16 @@ void board_init(void) {
 
     LPC_SYS_CTL.PCONP.REGISTER |= PCGPIO;
 
-    LPC_PINSEL.SEL0 = (0b1010 | 0x80000000);
-    LPC_PINSEL.SEL1 = 0b101010;
-    LPC_PINMODE.MODE1 = 0x3000;
+    //    LPC_PINSEL.SEL0 = (0b1010 | 0x80000000);
+    //    LPC_PINSEL.SEL1 = 0b101010;
+    //    LPC_PINMODE.MODE1 = 0x3000;
+
+    NVIC_SetPriority(PendSV_IRQn, 0xff);
+
+    // Should never fail!
+    pinblock_connect(connect, sizeof(connect) / sizeof(pinblock_t));
 
     LPC_GPIO[0].FIODIR = 0x400000;
     LPC_GPIO[0].FIOSET = 0x400000;
 
-    NVIC_SetPriority(PendSV_IRQn, 0xff);
-    //    if (pinblock_init(connect, sizeof(connect))) {
-//        // Error connecting pin block, TODO: Tell user about the error!
-//    }
 }

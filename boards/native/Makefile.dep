@@ -1,12 +1,4 @@
-ifneq (,$(filter defaulttransceiver,$(USEMODULE)))
-    USEMODULE += nativenet
-    ifeq (,$(filter netdev_base,$(USEMODULE)))
-        USEMODULE += transceiver
-    endif
-endif
-
-ifneq (,$(filter ng_netif_default,$(USEMODULE)))
-    USEMODULE += ng_nativenet
-    USEMODULE += ng_netdev_eth
-    USEMODULE += ng_nomac
+ifneq (,$(filter gnrc_netif_default,$(USEMODULE)))
+    USEMODULE += netdev2_tap
+    USEMODULE += gnrc_netdev2
 endif

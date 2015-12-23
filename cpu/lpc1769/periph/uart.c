@@ -12,7 +12,7 @@
  */
 
 #include <stdbool.h>
-#include "cpu-conf.h"
+#include "cpu_conf.h"
 #include "core_cm3.h"
 #include "cpuvars.h"
 #include "periph_conf.h"

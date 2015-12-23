@@ -22,37 +22,29 @@
 
 #include "shell.h"
 #include "shell_commands.h"
-#include "posix_io.h"
-#include "board_uart0.h"
-#include "net/ng_pktdump.h"
-#include "net/ng_netbase.h"
-
-/**
- * @brief   Buffer size used by the shell
- */
-#define SHELL_BUFSIZE           (64U)
+#include "net/gnrc/pktdump.h"
+#include "net/gnrc.h"
 
 /**
  * @brief   Maybe you are a golfer?!
  */
 int main(void)
 {
-    shell_t shell;
-    ng_netreg_entry_t dump;
+    gnrc_netreg_entry_t dump;
 
     puts("AT86RF2xx device driver test");
 
     /* register the pktdump thread */
-    puts("Register the packet dump thread for NG_NETTYPE_UNDEF packets");
-    dump.pid = ng_pktdump_getpid();
-    dump.demux_ctx = NG_NETREG_DEMUX_CTX_ALL;
-    ng_netreg_register(NG_NETTYPE_UNDEF, &dump);
+    puts("Register the packet dump thread for GNRC_NETTYPE_UNDEF packets");
+    dump.pid = gnrc_pktdump_getpid();
+    dump.demux_ctx = GNRC_NETREG_DEMUX_CTX_ALL;
+    gnrc_netreg_register(GNRC_NETTYPE_UNDEF, &dump);
 
     /* start the shell */
     puts("Initialization successful - starting the shell now");
-    (void) posix_open(uart0_handler_pid, 0);
-    shell_init(&shell, NULL, SHELL_BUFSIZE, uart0_readc, uart0_putc);
-    shell_run(&shell);
+
+    char line_buf[SHELL_DEFAULT_BUFSIZE];
+    shell_run(NULL, line_buf, SHELL_DEFAULT_BUFSIZE);
 
     return 0;
 }

@@ -20,8 +20,8 @@
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
  */
 
-#ifndef __BOARD_H
-#define __BOARD_H
+#ifndef BOARD_H_
+#define BOARD_H_
 
 #include <stdint.h>
 
@@ -36,11 +36,6 @@ extern "C" {
  * @brief The nominal CPU core clock in this board
  */
 #define F_CPU               (96000000)
-
-/**
- * @brief Assign the peripheral timer to be used as hardware timer
- */
-#define HW_TIMER            TIMER_0
 
 /**
  * @name Assign the UART interface to be used for stdio
@@ -89,11 +84,6 @@ extern "C" {
 /** @} */
 
 /**
- * @brief define radio packet length
- */
-typedef uint8_t radio_packet_length_t;
-
-/**
  * @brief Initialize board specific hardware, include clocks, LEDs and stdio
  */
 void board_init(void);
@@ -102,5 +92,5 @@ void board_init(void);
 }
 #endif
 
-#endif /* __BOARD_H */
+#endif /* BOARD_H_ */
 /** @} */

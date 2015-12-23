@@ -18,7 +18,7 @@
  * @author      Peter Kietzmann <peter.kietzmann@haw-hamburg.de>
  * @author      Fabian Nack <nack@inf.fu-berlin.de>
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
- * @author      Joakim Gebart <joakim.gebart@eistec.se>
+ * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se>
  * @author      Kaspar Schleiser <kaspar@schleiser.de>
  *
  * @}
@@ -32,7 +32,6 @@
 #include "periph_conf.h"
 #include "thread.h"
 #include "sched.h"
-#include "vtimer.h"
 
 #define ENABLE_DEBUG (0)
 #include "debug.h"
@@ -332,62 +331,6 @@ int spi_transfer_byte(spi_t dev, char out, char *in)
     }
 
     return 1;
-}
-
-int spi_transfer_bytes(spi_t dev, char *out, char *in, unsigned int length)
-{
-    int i, trans_ret, trans_bytes = 0;
-    char in_temp;
-
-    for (i = 0; i < length; i++) {
-        if (out != NULL) {
-            trans_ret = spi_transfer_byte(dev, out[i], &in_temp);
-        }
-        else {
-            trans_ret = spi_transfer_byte(dev, 0, &in_temp);
-        }
-        if (trans_ret < 0) {
-            return -1;
-        }
-        if (in != NULL) {
-            in[i] = in_temp;
-        }
-        trans_bytes++;
-    }
-
-    return trans_bytes++;
-}
-
-int spi_transfer_reg(spi_t dev, uint8_t reg, char out, char *in)
-{
-    int trans_ret;
-
-    trans_ret = spi_transfer_byte(dev, reg, in);
-    if (trans_ret < 0) {
-        return -1;
-    }
-    trans_ret = spi_transfer_byte(dev, out, in);
-    if (trans_ret < 0) {
-        return -1;
-    }
-
-    return 1;
-}
-
-int spi_transfer_regs(spi_t dev, uint8_t reg, char *out, char *in, unsigned int length)
-{
-    int trans_ret;
-
-    trans_ret = spi_transfer_byte(dev, reg, in);
-    if (trans_ret < 0) {
-        return -1;
-    }
-    trans_ret = spi_transfer_bytes(dev, out, in, length);
-    if (trans_ret < 0) {
-        return -1;
-    }
-
-    return trans_ret;
 }
 
 void spi_transmission_begin(spi_t dev, char reset_val)

@@ -8,7 +8,7 @@
  */
 
 /**
- * @ingroup auto_init_ng_netif
+ * @ingroup auto_init_gnrc_netif
  * @{
  *
  * @file
@@ -20,8 +20,8 @@
 #ifdef MODULE_XBEE
 
 #include "board.h"
-#include "net/ng_nomac.h"
-#include "net/ng_netbase.h"
+#include "net/gnrc/nomac.h"
+#include "net/gnrc.h"
 
 #include "xbee.h"
 #include "xbee_params.h"
@@ -38,7 +38,7 @@ static xbee_t xbee_devs[XBEE_NUM];
  * @{
  */
 #define XBEE_MAC_STACKSIZE           (THREAD_STACKSIZE_DEFAULT)
-#define XBEE_MAC_PRIO                (THREAD_PRIORITY_MAIN - 3)
+#define XBEE_MAC_PRIO                (THREAD_PRIORITY_MAIN - 4)
 
 /**
  * @brief   Stacks for the MAC layer threads
@@ -47,7 +47,7 @@ static char _nomac_stacks[XBEE_MAC_STACKSIZE][XBEE_NUM];
 
 void auto_init_xbee(void)
 {
-    for (int i = 0; i < XBEE_NUM; i++) {
+    for (size_t i = 0; i < XBEE_NUM; i++) {
         const xbee_params_t *p = &xbee_params[i];
         DEBUG("Initializing XBee radio at UART_%i\n", p->uart);
         int res = xbee_init(&xbee_devs[i],
@@ -60,9 +60,9 @@ void auto_init_xbee(void)
             DEBUG("Error initializing XBee radio device!");
         }
         else {
-            ng_nomac_init(_nomac_stacks[i],
-                    XBEE_MAC_STACKSIZE, XBEE_MAC_PRIO, "xbee",
-                    (ng_netdev_t *)&xbee_devs[i]);
+            gnrc_nomac_init(_nomac_stacks[i],
+                            XBEE_MAC_STACKSIZE, XBEE_MAC_PRIO, "xbee",
+                            (gnrc_netdev_t *)&xbee_devs[i]);
         }
     }
 }

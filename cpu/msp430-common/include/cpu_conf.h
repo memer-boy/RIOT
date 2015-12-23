@@ -27,15 +27,8 @@ extern "C" {
 #define THREAD_STACKSIZE_IDLE      (96)
 #define MSP430_ISR_STACK_SIZE           (256)
 
-#define RX_BUF_SIZE (3)
-#define TRANSCEIVER_BUFFER_SIZE (3)
-
-#ifndef UART0_BUFSIZE
-#define UART0_BUFSIZE                   (32)
-#endif
-
-#ifndef NG_PKTBUF_SIZE
-#define NG_PKTBUF_SIZE                  (2560)    /* TODO: Make this value
+#ifndef GNRC_PKTBUF_SIZE
+#define GNRC_PKTBUF_SIZE                (2560)    /* TODO: Make this value
                                                    * overall MTU dependent */
 #endif
 /** @} */

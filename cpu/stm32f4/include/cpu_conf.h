@@ -21,7 +21,9 @@
 #ifndef __CPU_CONF_H
 #define __CPU_CONF_H
 
-#if defined(CPU_MODEL_STM32F407VG)
+#if defined(CPU_MODEL_STM32F401RE)
+#include "stm32f401xe.h"
+#elif defined(CPU_MODEL_STM32F407VG)
 #include "stm32f407xx.h"
 #elif defined(CPU_MODEL_STM32F415RG)
 #include "stm32f415xx.h"
@@ -44,16 +46,6 @@ extern "C" {
  * @brief Length for reading CPU_ID
  */
 #define CPUID_ID_LEN                    (12)
-
-/**
- * @name CC110X buffer size definitions for the stm32f4
- * @{
- */
-#ifdef MODULE_CC110X
-#define TRANSCEIVER_BUFFER_SIZE         (10)
-#define RX_BUF_SIZE                     (10)
-#endif
-/** @} */
 
 #ifdef __cplusplus
 }

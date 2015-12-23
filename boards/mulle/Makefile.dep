@@ -1,9 +1,14 @@
-ifneq (,$(filter defaulttransceiver,$(USEMODULE)))
-    USEMODULE += at86rf231
-    ifeq (,$(filter netdev_base,$(USEMODULE)))
-        USEMODULE += transceiver
-    endif
+ifneq (,$(filter gnrc_netif_default,$(USEMODULE)))
+  USEMODULE += at86rf212b
+  USEMODULE += gnrc_nomac
 endif
+
+# The RTT clock drives the core clock in the default configuration
+FEATURES_REQUIRED += periph_rtt
+
+# The RTT clock drives the core clock in the default configuration
+FEATURES_REQUIRED += periph_rtt
+
 # The Mulle uses NVRAM to store persistent variables, such as boot count.
-#~ USEMODULE += nvram_spi
-# Uncomment above when #2353 is merged.
+USEMODULE += nvram_spi
+FEATURES_REQUIRED += periph_spi

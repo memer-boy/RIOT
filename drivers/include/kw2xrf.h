@@ -8,7 +8,7 @@
 
 /**
  * @defgroup    drivers_kw2xrf kw2x radio-driver
- * @ingroup     drivers
+ * @ingroup     drivers_netdev
  * @brief       Device driver for the Freescale KW2xD radio
  * @{
  *
@@ -27,7 +27,7 @@
 #include "board.h"
 #include "periph/spi.h"
 #include "periph/gpio.h"
-#include "net/ng_netdev.h"
+#include "net/gnrc/netdev.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,10 +41,10 @@ extern "C" {
 /**
  * @brief   Default protocol for data that is coming in
  */
-#ifdef MODULE_NG_SIXLOWPAN
-#define KW2XRF_DEFAULT_PROTOCOL       NG_NETTYPE_SIXLOWPAN
+#ifdef MODULE_GNRC_SIXLOWPAN
+#define KW2XRF_DEFAULT_PROTOCOL       GNRC_NETTYPE_SIXLOWPAN
 #else
-#define KW2XRF_DEFAULT_PROTOCOL       NG_NETTYPE_UNDEF
+#define KW2XRF_DEFAULT_PROTOCOL       GNRC_NETTYPE_UNDEF
 #endif
 
 /**
@@ -65,7 +65,7 @@ extern "C" {
 /**
  * @brief   Default channel used after initialization
  */
-#define KW2XRF_DEFAULT_CHANNEL        (17U)
+#define KW2XRF_DEFAULT_CHANNEL        (26U)
 
 /**
  * @brief   Default TX_POWER in dbm used after initialization
@@ -104,12 +104,12 @@ extern "C" {
  */
 typedef struct {
     /* netdev fields */
-    ng_netdev_driver_t const *driver;     /**< Pointer to the devices interface */
-    ng_netdev_event_cb_t event_cb;        /**< Netdev event callback */
+    gnrc_netdev_driver_t const *driver;   /**< Pointer to the devices interface */
+    gnrc_netdev_event_cb_t event_cb;      /**< Netdev event callback */
     kernel_pid_t mac_pid;                 /**< The driver's thread's PID */
     /* driver specific fields */
     uint8_t buf[KW2XRF_MAX_PKT_LENGTH];   /**< Buffer for incoming or outgoing packets */
-    ng_netconf_state_t state;             /**< Variable to keep radio driver's state */
+    netopt_state_t state;                 /**< Variable to keep radio driver's state */
     uint8_t seq_nr;                       /**< Next packets sequence number */
     uint16_t radio_pan;                   /**< The PAN the radio device is using */
     uint8_t radio_channel;                /**< The channel the radio device is using */
@@ -117,7 +117,7 @@ typedef struct {
     uint8_t addr_long[8];                 /**< The long address the radio device is using */
     uint16_t option;                      /**< Bit field to save enable/disable options */
     int8_t tx_power;                      /**< The current tx-power setting of the device */
-    ng_nettype_t proto;                   /**< Protocol the interface speaks */
+    gnrc_nettype_t proto;                 /**< Protocol the interface speaks */
 } kw2xrf_t;
 
 /**
@@ -147,7 +147,7 @@ typedef struct kw2xrf_params {
 /**
  * @brief Reference to the KW2XRF driver interface
  */
-extern const ng_netdev_driver_t kw2xrf_driver;
+extern const gnrc_netdev_driver_t kw2xrf_driver;
 
 #ifdef __cplusplus
 }

@@ -31,12 +31,17 @@
 #include "irq.h"
 #include "log.h"
 
-#if SCHEDSTATISTICS
-#include "hwtimer.h"
+#ifdef MODULE_SCHEDSTATISTICS
+#include "xtimer.h"
 #endif
 
 #define ENABLE_DEBUG (0)
 #include "debug.h"
+
+#if ENABLE_DEBUG
+/* For PRIu16 etc. */
+#include <inttypes.h>
+#endif
 
 volatile int sched_num_threads = 0;
 
@@ -50,7 +55,7 @@ volatile kernel_pid_t sched_active_pid = KERNEL_PID_UNDEF;
 clist_node_t *sched_runqueues[SCHED_PRIO_LEVELS];
 static uint32_t runqueue_bitcache = 0;
 
-#if SCHEDSTATISTICS
+#ifdef MODULE_SCHEDSTATISTICS
 static void (*sched_cb) (uint32_t timestamp, uint32_t value) = NULL;
 schedstat sched_pidlist[KERNEL_PID_LAST + 1];
 #endif
@@ -76,8 +81,8 @@ int sched_run(void)
         return 0;
     }
 
-#ifdef SCHEDSTATISTICS
-    unsigned long time = hwtimer_now();
+#ifdef MODULE_SCHEDSTATISTICS
+    unsigned long time = xtimer_now();
 #endif
 
     if (active_thread) {
@@ -91,7 +96,7 @@ int sched_run(void)
         }
 #endif
 
-#ifdef SCHEDSTATISTICS
+#ifdef MODULE_SCHEDSTATISTICS
         schedstat *active_stat = &sched_pidlist[active_thread->pid];
         if (active_stat->laststart) {
             active_stat->runtime_ticks += time - active_stat->laststart;
@@ -99,7 +104,7 @@ int sched_run(void)
 #endif
     }
 
-#if SCHEDSTATISTICS
+#ifdef MODULE_SCHEDSTATISTICS
     schedstat *next_stat = &sched_pidlist[next_thread->pid];
     next_stat->laststart = time;
     next_stat->schedules++;
@@ -117,7 +122,7 @@ int sched_run(void)
     return 1;
 }
 
-#if SCHEDSTATISTICS
+#ifdef MODULE_SCHEDSTATISTICS
 void sched_register_cb(void (*callback)(uint32_t, uint32_t))
 {
     sched_cb = callback;

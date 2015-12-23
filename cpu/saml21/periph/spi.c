@@ -18,7 +18,7 @@
  * @author      Thomas Eichinger <thomas.eichinger@fu-berlin.de>
  * @author      Troels Hoffmeyer <troels.d.hoffmeyer@gmail.com>
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
- * @author      Joakim Gebart <joakim.gebart@eistec.se>
+ * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se>
  * @author      Kaspar Schleiser <kaspar@schleiser.de>
  *
  * @}
@@ -72,7 +72,7 @@ typedef struct spi_saml21 {
 static const spi_saml21_t spi[] = {
 #if SPI_0_EN
     /* SPI device */   /* MCLK flag */        /* GLCK id */         /* SCLK */  /* MISO */  /* MOSI */ /* dipo+dopo */
-    { &(SERCOM0->SPI), MCLK_APBCMASK_SERCOM0, SERCOM0_GCLK_ID_CORE, { GPIO(PA,7), 3 }, { GPIO(PA,4), 3 }, { GPIO(PA,6), 3 }, 0, 1 }
+    { &(SERCOM0->SPI), MCLK_APBCMASK_SERCOM0, SERCOM0_GCLK_ID_CORE, { GPIO_PIN(PA,7), 3 }, { GPIO_PIN(PA,4), 3 }, { GPIO_PIN(PA,6), 3 }, 0, 1 }
 #endif
 };
 
@@ -173,7 +173,7 @@ int spi_init_master(spi_t dev, spi_conf_t conf, spi_speed_t speed)
 int spi_init_slave(spi_t dev, spi_conf_t conf, char (*cb)(char))
 {
     /* TODO */
-    return 0;
+    return -1;
 }
 
 void spi_transmission_begin(spi_t dev, char reset_val)
@@ -217,41 +217,6 @@ int spi_transfer_byte(spi_t dev, char out, char *in)
         spi_dev->DATA.bit.DATA;
     }
     return 1;
-}
-
-int spi_transfer_bytes(spi_t dev, char *out, char *in, unsigned int length)
-{
-    int transfered = 0;
-    int ret = 0;
-
-    DEBUG("out*: %p out: %x length: %x\n", out, *out, length);
-    while (length--) {
-        if ((ret = spi_transfer_byte(dev, *out, in)) <  0) {
-            return ret;
-        }
-
-        transfered += ret;
-
-        if (out) {
-            out++;
-        }
-        if (in) {
-            in++;
-        }
-    }
-    return transfered;
-}
-
-int spi_transfer_reg(spi_t dev, uint8_t reg, char out, char *in)
-{
-    spi_transfer_byte(dev, reg, NULL);
-    return spi_transfer_byte(dev, out, in);
-}
-
-int spi_transfer_regs(spi_t dev, uint8_t reg, char *out, char *in, unsigned int length)
-{
-    spi_transfer_byte(dev, reg, NULL);
-    return spi_transfer_bytes(dev, out, in, length);
 }
 
 void spi_poweron(spi_t dev)

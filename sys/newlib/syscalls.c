@@ -34,13 +34,14 @@
 #include "board.h"
 #include "thread.h"
 #include "kernel.h"
-#include "mutex.h"
-#include "ringbuffer.h"
 #include "irq.h"
-#include "periph/uart.h"
 
-#ifdef MODULE_UART0
-#include "board_uart0.h"
+#include "uart_stdio.h"
+
+#ifdef MODULE_XTIMER
+#include <sys/time.h>
+#include "div.h"
+#include "xtimer.h"
 #endif
 
 /**
@@ -48,44 +49,14 @@
  */
 extern char _sheap;                 /* start of the heap */
 extern char _eheap;                 /* end of the heap */
-caddr_t heap_top = (caddr_t)&_sheap + 4;
-
-#ifndef MODULE_UART0
-/**
- * @brief use mutex for waiting on incoming UART chars
- */
-static mutex_t uart_rx_mutex = MUTEX_INIT;
-static char rx_buf_mem[STDIO_RX_BUFSIZE];
-static ringbuffer_t rx_buf;
-#endif
-
-/**
- * @brief Receive a new character from the UART and put it into the receive buffer
- */
-void rx_cb(void *arg, char data)
-{
-    (void)arg;
-#ifndef MODULE_UART0
-    ringbuffer_add_one(&rx_buf, data);
-    mutex_unlock(&uart_rx_mutex);
-#else
-    if (uart0_handler_pid) {
-        uart0_handle_incoming(data);
-        uart0_notify_thread();
-    }
-#endif
-}
+char *heap_top = &_sheap + 4;
 
 /**
  * @brief Initialize NewLib, called by __libc_init_array() from the startup script
  */
 void _init(void)
 {
-#ifndef MODULE_UART0
-    mutex_lock(&uart_rx_mutex);
-    ringbuffer_init(&rx_buf, rx_buf_mem, STDIO_RX_BUFSIZE);
-#endif
-    uart_init(STDIO, STDIO_BAUDRATE, rx_cb, 0, 0);
+    uart_stdio_init();
 }
 
 /**
@@ -107,7 +78,7 @@ void _fini(void)
 void _exit(int n)
 {
     printf("#! exit %i: resetting\n", n);
-    NVIC_SystemReset();
+    reboot(n);
     while(1);
 }
 
@@ -115,20 +86,19 @@ void _exit(int n)
  * @brief Allocate memory from the heap.
  *
  * The current heap implementation is very rudimentary, it is only able to allocate
- * memory. But it does not
- * - have any means to free memory again
+ * memory. But it does not have any means to free memory again
  *
- * @return [description]
+ * @return      pointer to the newly allocated memory on success
+ * @return      pointer set to address `-1` on failure
  */
-caddr_t _sbrk_r(struct _reent *r, ptrdiff_t incr)
+void *_sbrk_r(struct _reent *r, ptrdiff_t incr)
 {
     unsigned int state = disableIRQ();
-    caddr_t res = heap_top;
+    void *res = heap_top;
 
-    if (((incr > 0) && ((heap_top + incr > &_eheap) || (heap_top + incr < res))) ||
-        ((incr < 0) && ((heap_top + incr < &_sheap) || (heap_top + incr > res)))) {
+    if ((heap_top + incr > &_eheap) || (heap_top + incr < &_sheap)) {
         r->_errno = ENOMEM;
-        res = (void *) -1;
+        res = (void *)-1;
     }
     else {
         heap_top += incr;
@@ -143,8 +113,19 @@ caddr_t _sbrk_r(struct _reent *r, ptrdiff_t incr)
  *
  * @return      the process ID of the current thread
  */
-int _getpid(void)
+pid_t _getpid(void)
 {
+    return sched_active_pid;
+}
+
+/**
+ * @brief Get the process-ID of the current thread
+ *
+ * @return      the process ID of the current thread
+ */
+pid_t _getpid_r(struct _reent *ptr)
+{
+    (void) ptr;
     return sched_active_pid;
 }
 
@@ -158,7 +139,7 @@ int _getpid(void)
  * @return      TODO
  */
 __attribute__ ((weak))
-int _kill_r(struct _reent *r, int pid, int sig)
+int _kill_r(struct _reent *r, pid_t pid, int sig)
 {
     (void) pid;
     (void) sig;
@@ -202,19 +183,9 @@ int _open_r(struct _reent *r, const char *name, int mode)
  */
 int _read_r(struct _reent *r, int fd, void *buffer, unsigned int count)
 {
-#ifndef MODULE_UART0
-    int res;
-    mutex_lock(&uart_rx_mutex);
-    unsigned state = disableIRQ();
-    count = count < rx_buf.avail ? count : rx_buf.avail;
-    res = ringbuffer_get(&rx_buf, (char*)buffer, count);
-    restoreIRQ(state);
-    return res;
-#else
-    char *res = (char*)buffer;
-    res[0] = (char)uart0_readc();
-    return 1;
-#endif
+    (void)r;
+    (void)fd;
+    return uart_stdio_read(buffer, count);
 }
 
 /**
@@ -236,13 +207,7 @@ int _write_r(struct _reent *r, int fd, const void *data, unsigned int count)
 {
     (void) r;
     (void) fd;
-    unsigned int i = 0;
-
-    while (i < count) {
-        uart_write_blocking(STDIO, ((char*)data)[i++]);
-    }
-
-    return (int)i;
+    return uart_stdio_write(data, count);
 }
 
 /**
@@ -356,10 +321,22 @@ int _unlink_r(struct _reent *r, char *path)
  * @return TODO
  */
 __attribute__ ((weak))
-int _kill(int pid, int sig)
+int _kill(pid_t pid, int sig)
 {
     (void) pid;
     (void) sig;
     errno = ESRCH;                         /* not implemented yet */
     return -1;
 }
+
+#ifdef MODULE_XTIMER
+int _gettimeofday_r(struct _reent *r, struct timeval *restrict tp, void *restrict tzp)
+{
+    (void)tzp;
+    (void) r;
+    uint64_t now = xtimer_now64();
+    tp->tv_sec = div_u64_by_1000000(now);
+    tp->tv_usec = now - (tp->tv_sec * SEC_IN_USEC);
+    return 0;
+}
+#endif

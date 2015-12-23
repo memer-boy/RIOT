@@ -23,8 +23,8 @@
  * @author      Freie Universität Berlin, Computer Systems & Telematics, FeuerWhere project
  */
 
-#ifndef _MSB_BOARD_H
-#define _MSB_BOARD_H
+#ifndef MSB_BOARD_H_
+#define MSB_BOARD_H_
 
 #include "board-conf.h"
 
@@ -32,12 +32,32 @@
 extern "C" {
 #endif
 
-// for correct inclusion of <msp430.h>
+/*  for correct inclusion of <msp430.h> */
 #ifndef __MSP430F1612__
 #define __MSP430F1612__
 #endif
 
-//MSB430 core
+/**
+ * @brief   Xtimer configuration
+ * @{
+ */
+#define XTIMER                      (0)
+#define XTIMER_CHAN                 (0)
+#define XTIMER_MASK                 (0xffff0000)
+#define XTIMER_SHIFT_ON_COMPARE     (4)
+#define XTIMER_BACKOFF              (40)
+/** @} */
+
+/**
+ * @brief   Standard input/output device configuration
+ * @{
+ */
+#define STDIO                       (0)
+#define STDIO_BAUDRATE              (115200U)
+#define STDIO_RX_BUFSIZE            (64U)
+/** @} */
+
+/* MSB430 core */
 #define MSP430_INITIAL_CPU_SPEED    2457600uL
 #define F_CPU                       MSP430_INITIAL_CPU_SPEED
 #define F_RC_OSCILLATOR             32768
@@ -61,7 +81,5 @@ extern "C" {
 
 #include "board-conf.h"
 
-typedef uint8_t radio_packet_length_t;
-
 /** @} */
-#endif // _MSB_BOARD_H
+#endif /*  MSB_BOARD_H_ */

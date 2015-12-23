@@ -7,7 +7,7 @@
  */
 
 /**
- * @ingroup     msp430
+ * @ingroup     cpu_msp430_common
  * @{
  *
  * @file
@@ -51,8 +51,8 @@ extern "C" {
 #ifndef NDEBUG
 # define assert(assertion) \
     if (!(assertion)) { \
-        printf("%s:%d: %s: Assertion '%s' failed", __FILE__, __LINE__, \
-               ASSERT_FUNC, #assertion); \
+        printf("%s:%d: %s: Assertion '%s' failed", RIOT_FILE_RELATIVE, \
+                __LINE__, ASSERT_FUNC, #assertion); \
         abort(); \
     }
 #else

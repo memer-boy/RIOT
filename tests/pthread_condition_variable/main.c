@@ -54,11 +54,11 @@ int main(void)
 {
     count = 0;
     is_finished = 0;
-    expected_value = 1000*1000;
+    expected_value = 1000ul * 1000ul;
     pthread_cond_init(&cv, NULL);
 
     kernel_pid_t pid = thread_create(stack,sizeof(stack), THREAD_PRIORITY_MAIN - 1,
-                                     CREATE_WOUT_YIELD | CREATE_STACKTEST,
+                                     THREAD_CREATE_WOUT_YIELD | THREAD_CREATE_STACKTEST,
                                      second_thread, NULL, "second_thread");
 
     while (1) {

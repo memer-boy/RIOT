@@ -50,11 +50,6 @@
 /** @} */
 
 /**
- * @name Assign the hardware timer
- */
-#define HW_TIMER            TIMER_0
-
-/**
  * @name LED pin definitions
  * @{
  */
@@ -86,16 +81,16 @@
 /**
  * @name User button configuration
  */
-#define BUTTON1             GPIO_0
+#define BUTTON1             GPIO_PIN(PORT_B,2)
 
 /**
  * @name CC3000 pin configuration
  * @{
  */
 #define CC3000_SPI          SPI_0
-#define CC3000_CS           GPIO_1
-#define CC3000_EN           GPIO_2
-#define CC3000_INT          GPIO_3
+#define CC3000_CS           GPIO_PIN(PORT_B,12)
+#define CC3000_EN           GPIO_PIN(PORT_B,8)
+#define CC3000_INT          GPIO_PIN(PORT_B,11)
 /** @} */
 
 /**
@@ -103,13 +98,8 @@
  * @{
  */
 #define EXTFLASH_SPI        SPI_0
-#define EXTFLASH            GPIO_4
+#define EXTFLASH            GPIO_PIN(PORT_B,9)
 /** @} */
-
-/**
- * Define the type for the radio packet length for the transceiver
- */
-typedef uint8_t radio_packet_length_t;
 
 /**
  * @brief Initialize board specific hardware, including clock, LEDs and std-IO

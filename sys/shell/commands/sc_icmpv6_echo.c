@@ -17,57 +17,76 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
-#ifdef MODULE_NG_ICMPV6
+#ifdef MODULE_GNRC_ICMPV6
 
 #include "byteorder.h"
-#include "net/ng_icmpv6.h"
-#include "net/ng_ipv6/addr.h"
-#include "net/ng_ipv6/nc.h"
-#include "net/ng_ipv6/hdr.h"
-#include "net/ng_netbase.h"
+#include "net/gnrc/icmpv6.h"
+#include "net/ipv6/addr.h"
+#include "net/gnrc/ipv6/nc.h"
+#include "net/gnrc/ipv6/hdr.h"
+#include "net/gnrc.h"
 #include "thread.h"
 #include "utlist.h"
-#include "vtimer.h"
+#include "xtimer.h"
 
 static uint16_t id = 0x53;
-static uint16_t seq = 1;
-static char ipv6_str[NG_IPV6_ADDR_MAX_STR_LEN];
+static uint16_t min_seq_expected = 0;
+static uint16_t max_seq_expected = 0;
+static char ipv6_str[IPV6_ADDR_MAX_STR_LEN];
 
 static void usage(char **argv)
 {
-    printf("%s [<n>] <ipv6 addr> [<payload_len>]\n", argv[0]);
+    printf("%s [<count>] <ipv6 addr> [<payload_len>] [<delay in ms>] [<stats interval>]\n", argv[0]);
+    puts("defaults:");
+    puts("    count = 3");
+    puts("    payload_len = 4");
+    puts("    delay = 1000");
+    puts("    stats interval = count");
 }
 
-void _set_payload(ng_icmpv6_echo_t *hdr, size_t payload_len)
+void _set_payload(icmpv6_echo_t *hdr, size_t payload_len)
 {
     size_t i = 0;
     uint8_t *payload = (uint8_t *)(hdr + 1);
 
     while (i < payload_len) {
-        if (seq > 0xff) {
-            payload[i] = (uint8_t)(seq >> 8);
-            payload[i + 1] = (uint8_t)(seq & 0xff);
+        if (id > 0xff) {
+            payload[i] = (uint8_t)(id >> 8);
+            payload[i + 1] = (uint8_t)(id & 0xff);
             i += 2;
         }
         else {
-            payload[i++] = (uint8_t)(seq & 0xff);
+            payload[i++] = (uint8_t)(id & 0xff);
         }
     }
 
-    if (i > payload_len) {
-        payload[payload_len - 1] = seq >> 8;
+    if (i > payload_len) {  /* when id > 0xff and payload_len is odd */
+        payload[payload_len - 1] = id >> 8;
     }
 }
 
-int _handle_reply(ng_pktsnip_t *pkt, uint64_t time)
+static inline bool _expected_seq(uint16_t seq)
 {
-    ng_pktsnip_t *ipv6, *icmpv6;
-    ng_ipv6_hdr_t *ipv6_hdr;
-    ng_icmpv6_echo_t *icmpv6_hdr;
+    /* take integer overflows in account */
+    if (min_seq_expected > max_seq_expected) {
+        return (seq >= min_seq_expected) || (seq <= max_seq_expected);
+    }
+    else {
+        return (seq >= min_seq_expected) && (seq <= max_seq_expected);
+    }
+}
 
-    LL_SEARCH_SCALAR(pkt, ipv6, type, NG_NETTYPE_IPV6);
-    LL_SEARCH_SCALAR(pkt, icmpv6, type, NG_NETTYPE_ICMPV6);
+int _handle_reply(gnrc_pktsnip_t *pkt, uint32_t time)
+{
+    gnrc_pktsnip_t *ipv6, *icmpv6;
+    ipv6_hdr_t *ipv6_hdr;
+    icmpv6_echo_t *icmpv6_hdr;
+    uint16_t seq;
+
+    LL_SEARCH_SCALAR(pkt, ipv6, type, GNRC_NETTYPE_IPV6);
+    LL_SEARCH_SCALAR(pkt, icmpv6, type, GNRC_NETTYPE_ICMPV6);
 
     if ((ipv6 == NULL) || (icmpv6 == NULL)) {
         puts("error: IPv6 header or ICMPv6 header not found in reply");
@@ -76,16 +95,19 @@ int _handle_reply(ng_pktsnip_t *pkt, uint64_t time)
 
     ipv6_hdr = ipv6->data;
     icmpv6_hdr = icmpv6->data;
+    seq = byteorder_ntohs(icmpv6_hdr->seq);
 
-    if ((byteorder_ntohs(icmpv6_hdr->id) == id) &&
-        (byteorder_ntohs(icmpv6_hdr->seq) == seq)) {
-        timex_t rt = timex_from_uint64(time);
+    if ((byteorder_ntohs(icmpv6_hdr->id) == id) && _expected_seq(seq)) {
+        if (seq <= min_seq_expected) {
+            min_seq_expected++;
+        }
+
         printf("%u bytes from %s: id=%" PRIu16 " seq=%" PRIu16 " hop limit=%" PRIu8
                " time = %" PRIu32 ".%03" PRIu32 " ms\n", (unsigned) icmpv6->size,
-               ng_ipv6_addr_to_str(ipv6_str, &(ipv6_hdr->src), sizeof(ipv6_str)),
-               byteorder_ntohs(icmpv6_hdr->id), byteorder_ntohs(icmpv6_hdr->seq),
-               ipv6_hdr->hl, rt.seconds, rt.microseconds);
-        ng_ipv6_nc_still_reachable(&ipv6_hdr->src);
+               ipv6_addr_to_str(ipv6_str, &(ipv6_hdr->src), sizeof(ipv6_str)),
+               byteorder_ntohs(icmpv6_hdr->id), seq, ipv6_hdr->hl,
+               time / MS_IN_USEC, time % MS_IN_USEC);
+        gnrc_ipv6_nc_still_reachable(&ipv6_hdr->src);
     }
     else {
         puts("error: unexpected parameters");
@@ -95,103 +117,144 @@ int _handle_reply(ng_pktsnip_t *pkt, uint64_t time)
     return 1;
 }
 
+static void _print_stats(char *addr_str, int success, int count, uint64_t total_time,
+                         uint64_t sum_rtt, uint32_t min_rtt, uint32_t max_rtt)
+{
+    printf("--- %s ping statistics ---\n", addr_str);
+
+    if (success > 0) {
+        uint32_t avg_rtt = (uint32_t)sum_rtt / count;  /* get average */
+        printf("%d packets transmitted, %d received, %d%% packet loss, time %"
+               PRIu32 ".06%" PRIu32 " s\n", count, success,
+               (100 - ((success * 100) / count)),
+               (uint32_t)total_time / SEC_IN_USEC, (uint32_t)total_time % SEC_IN_USEC);
+        printf("rtt min/avg/max = "
+               "%" PRIu32 ".%03" PRIu32 "/"
+               "%" PRIu32 ".%03" PRIu32 "/"
+               "%" PRIu32 ".%03" PRIu32 " ms\n",
+               min_rtt / MS_IN_USEC, min_rtt % MS_IN_USEC,
+               avg_rtt / MS_IN_USEC, avg_rtt % MS_IN_USEC,
+               max_rtt / MS_IN_USEC, max_rtt % MS_IN_USEC);
+    }
+    else {
+        printf("%d packets transmitted, 0 received, 100%% packet loss\n", count);
+    }
+}
+
 int _icmpv6_ping(int argc, char **argv)
 {
-    int n = 3, success = 0, count;
+    int count = 3, success = 0, remaining, stat_interval = 0, stat_counter = 0;
     size_t payload_len = 4;
+    uint32_t delay = 1 * SEC_IN_MS;
     char *addr_str;
-    ng_ipv6_addr_t addr;
-    ng_netreg_entry_t *ipv6_entry, my_entry = { NULL, NG_ICMPV6_ECHO_REP,
-                                                thread_getpid()
-                                              };
-    timex_t min_rtt = { UINT32_MAX, UINT32_MAX }, max_rtt = { 0, 0 };
-    timex_t sum_rtt = { 0, 0 };
+    ipv6_addr_t addr;
+    msg_t msg;
+    gnrc_netreg_entry_t *ipv6_entry, my_entry = { NULL, ICMPV6_ECHO_REP,
+                                                  thread_getpid() };
+    uint32_t min_rtt = UINT32_MAX, max_rtt = 0;
+    uint64_t sum_rtt = 0;
+    uint64_t ping_start;
+    int param_offset = 0;
 
-    switch (argc) {
-        case 1:
-            usage(argv);
-            return 1;
-
-        case 2:
-            addr_str = argv[1];
-            break;
-
-        case 3:
-            n = atoi(argv[1]);
-            addr_str = argv[2];
-            break;
-
-        case 4:
-        default:
-            n = atoi(argv[1]);
-            addr_str = argv[2];
-            payload_len = atoi(argv[3]);
-            break;
+    if (argc < 2) {
+        usage(argv);
+        return 1;
+    }
+    else if ((argc > 2) &&  ((count = atoi(argv[1])) > 0)) {
+        param_offset = 1;
+    }
+    else {
+        count = 3;
     }
 
-    if (ng_ipv6_addr_from_str(&addr, addr_str) == NULL) {
+    stat_interval = count;
+
+    addr_str = argv[1 + param_offset];
+
+    if (argc > (2 + param_offset)) {
+        payload_len = atoi(argv[2 + param_offset]);
+    }
+    if (argc > (3 + param_offset)) {
+        delay = atoi(argv[3 + param_offset]);
+    }
+    if (argc > (4 + param_offset)) {
+        stat_interval = atoi(argv[4 + param_offset]);
+    }
+
+    if ((int)payload_len < 0) {
         usage(argv);
         return 1;
     }
 
-    if (ng_netreg_register(NG_NETTYPE_ICMPV6, &my_entry) < 0) {
+    if (ipv6_addr_from_str(&addr, addr_str) == NULL) {
+        puts("error: malformed address");
+        return 1;
+    }
+
+    if (gnrc_netreg_register(GNRC_NETTYPE_ICMPV6, &my_entry) < 0) {
         puts("error: network registry is full");
         return 1;
     }
 
-    ipv6_entry = ng_netreg_lookup(NG_NETTYPE_IPV6, NG_NETREG_DEMUX_CTX_ALL);
+    ipv6_entry = gnrc_netreg_lookup(GNRC_NETTYPE_IPV6, GNRC_NETREG_DEMUX_CTX_ALL);
 
     if (ipv6_entry == NULL) {
         puts("error: ipv6 thread missing");
         return 1;
     }
 
-    count = n;
+    remaining = count;
 
-    while ((count--) > 0) {
-        msg_t msg;
-        ng_pktsnip_t *pkt;
-        timex_t start, stop, timeout = { 5, 0 };
+    ping_start = xtimer_now64();
 
-        pkt = ng_icmpv6_echo_req_build(id, seq, NULL, payload_len);
+    while ((remaining--) > 0) {
+        gnrc_pktsnip_t *pkt;
+        uint32_t start, stop, timeout = 1 * SEC_IN_USEC;
+
+        pkt = gnrc_icmpv6_echo_build(ICMPV6_ECHO_REQ, id, ++max_seq_expected,
+                                     NULL, payload_len);
 
         if (pkt == NULL) {
             puts("error: packet buffer full");
-            return 1;
+            continue;
         }
 
         _set_payload(pkt->data, payload_len);
 
-        pkt = ng_netreg_hdr_build(NG_NETTYPE_IPV6, pkt, NULL, 0, addr.u8,
-                                  sizeof(ng_ipv6_addr_t));
+        pkt = gnrc_netreg_hdr_build(GNRC_NETTYPE_IPV6, pkt, NULL, 0, addr.u8,
+                                    sizeof(ipv6_addr_t));
 
         if (pkt == NULL) {
             puts("error: packet buffer full");
-            return 1;
+            continue;
         }
 
-        vtimer_now(&start);
-        ng_netapi_send(ipv6_entry->pid, pkt);
+        start = xtimer_now();
+        if (gnrc_netapi_send(ipv6_entry->pid, pkt) < 1) {
+            puts("error: unable to send ICMPv6 echo request\n");
+            gnrc_pktbuf_release(pkt);
+            continue;
+        }
 
-        if (vtimer_msg_receive_timeout(&msg, timeout) >= 0) {
+        /* TODO: replace when #4219 was fixed */
+        if (xtimer_msg_receive_timeout64(&msg, (uint64_t)timeout) >= 0) {
             switch (msg.type) {
-                case NG_NETAPI_MSG_TYPE_RCV:
-                    vtimer_now(&stop);
-                    stop = timex_sub(stop, start);
+                case GNRC_NETAPI_MSG_TYPE_RCV:
+                    stop = xtimer_now() - start;
 
-                    ng_pktsnip_t *pkt = (ng_pktsnip_t *)msg.content.ptr;
-                    success += _handle_reply(pkt, timex_uint64(stop));
-                    ng_pktbuf_release(pkt);
+                    gnrc_pktsnip_t *pkt = (gnrc_pktsnip_t *)msg.content.ptr;
+                    success += _handle_reply(pkt, stop);
+                    gnrc_pktbuf_release(pkt);
 
-                    if (timex_cmp(stop, max_rtt) > 0) {
+                    if (stop > max_rtt) {
                         max_rtt = stop;
                     }
 
-                    if (timex_cmp(stop, min_rtt) < 1) {
+                    if (stop < min_rtt) {
                         min_rtt = stop;
                     }
 
-                    sum_rtt = timex_add(sum_rtt, stop);
+                    sum_rtt += stop;
 
                     break;
 
@@ -205,35 +268,39 @@ int _icmpv6_ping(int argc, char **argv)
             puts("ping timeout");
         }
 
-        seq++;
+        while (msg_try_receive(&msg) > 0) {
+            if (msg.type == GNRC_NETAPI_MSG_TYPE_RCV) {
+                printf("dropping additional response packet (probably caused by duplicates)\n");
+                gnrc_pktsnip_t *pkt = (gnrc_pktsnip_t *)msg.content.ptr;
+                gnrc_pktbuf_release(pkt);
+            }
+        }
+
+        if (remaining > 0) {
+            xtimer_usleep64(delay * MS_IN_USEC);
+        }
+        if ((++stat_counter == stat_interval) || (remaining == 0)) {
+            uint64_t total_time = xtimer_now64() - ping_start;
+            _print_stats(addr_str, success, (count - remaining), total_time, sum_rtt, min_rtt,
+                         max_rtt);
+            stat_counter = 0;
+        }
+
     }
 
-    seq = 1;
+    max_seq_expected = 0;
     id++;
 
-    ng_netreg_unregister(NG_NETTYPE_ICMPV6, &my_entry);
-
-    printf("--- %s ping statistics ---\n", addr_str);
-
-    if (success > 0) {
-        printf("%d packets transmitted, %d received, %d%% packet loss, time %"
-               PRIu32 ".03%" PRIu32 " s\n", n, success, (success - n) / n,
-               sum_rtt.seconds, sum_rtt.microseconds);
-        timex_t avg_rtt = timex_from_uint64(timex_uint64(sum_rtt) / n);  /* get average */
-        printf("rtt min/avg/max = "
-               "%" PRIu32 ".%03" PRIu32 "/"
-               "%" PRIu32 ".%03" PRIu32 "/"
-               "%" PRIu32 ".%03" PRIu32 " ms\n",
-               min_rtt.seconds, min_rtt.microseconds,
-               avg_rtt.seconds, avg_rtt.microseconds,
-               max_rtt.seconds, max_rtt.microseconds);
-    }
-    else {
-        printf("%d packets transmitted, 0 received, 100%% packet loss\n", n);
-        return 1;
+    gnrc_netreg_unregister(GNRC_NETTYPE_ICMPV6, &my_entry);
+    while (msg_try_receive(&msg) > 0) {
+        if (msg.type == GNRC_NETAPI_MSG_TYPE_RCV) {
+            printf("dropping additional response packet (probably caused by duplicates)\n");
+            gnrc_pktsnip_t *pkt = (gnrc_pktsnip_t *)msg.content.ptr;
+            gnrc_pktbuf_release(pkt);
+        }
     }
 
-    return 0;
+    return success ? 0 : 1;
 }
 
 #endif

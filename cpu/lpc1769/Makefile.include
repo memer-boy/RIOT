@@ -5,7 +5,7 @@ export CFLAGS += -DCOREIF_NG=1
 export USEMODULE += cortex-m3_common
 
 # define path to cortex-m common module, which is needed for this CPU
-export CORTEX_COMMON = $(RIOTCPU)/cortex-m3_common/
+export CORTEX_COMMON = $(RIOTCPU)/cortexm_common/
 
 # define the linker script to use for this CPU. The CPU_MODEL variable is defined in the
 # board's Makefile.include. This enables multiple STMF0 controllers with different memory to

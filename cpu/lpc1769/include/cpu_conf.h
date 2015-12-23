@@ -17,7 +17,14 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
-
+/**
+ * @name Cortex common configuration
+ * @{
+ */
+#define CPU_IRQ_NUMOF 32
+#define CPU_DEFAULT_IRQ_PRIO 32
+/** @} */
+    
 /**
  * @name Kernel configuration
  * @{

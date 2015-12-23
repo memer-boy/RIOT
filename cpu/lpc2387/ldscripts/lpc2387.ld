@@ -89,13 +89,38 @@ SECTIONS
     } >flash                            /* put all the above into FLASH */
     . = ALIGN(4);
 
-    /* .ARM.exidx is sorted, so has to go in its own output section.  */
-    __exidx_start = .;
+    /* The .extab, .exidx sections are used for C++ exception handling */
+    .ARM.extab :
+    {
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
+    } > flash
+
+    PROVIDE_HIDDEN (__exidx_start = .);
     .ARM.exidx :
     {
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    } >flash
-    __exidx_end = .;
+    } > flash
+    PROVIDE_HIDDEN (__exidx_end = .);
+
+    .eh_frame_hdr :
+    {
+        *(.eh_frame_hdr)
+    } > flash
+
+    .eh_frame : ONLY_IF_RO
+    {
+        KEEP (*(.eh_frame))
+    } > flash
+
+    .gcc_except_table : ONLY_IF_RO
+    {
+        *(.gcc_except_table .gcc_except_table.*)
+    } > flash
+
+/*
+    .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } > sram_u AT > flash
+    .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) } > sram_u AT > flash
+*/
 
     _etext = . ;                        /* define a global symbol _etext just after the last code byte */
 
@@ -212,9 +237,9 @@ SECTIONS
     __heap1_size = ORIGIN(ram) + LENGTH(ram) - . - __stack_size;
     .heap1 (NOLOAD) :
     {
-        PROVIDE(__heap1_start = .);
+        PROVIDE(_sheap = .);
         . = . + __heap1_size;
-        PROVIDE(__heap1_max = .);
+        PROVIDE(_eheap = .);
     } > ram
 
     /*

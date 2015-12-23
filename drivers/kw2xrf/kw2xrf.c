@@ -14,6 +14,7 @@
  *
  * @author      Johann Fischer <j.fischer@phytec.de>
  * @author      Jonas Remmert <j.remmert@phytec.de>
+ * @author      Oliver Hahm <oliver.hahm@inria.fr>
  * @}
  */
 #include "panic.h"
@@ -24,8 +25,8 @@
 #include "msg.h"
 #include "periph/gpio.h"
 #include "periph/cpuid.h"
-#include "net/ng_netbase.h"
-#include "net/ng_ieee802154.h"
+#include "net/gnrc.h"
+#include "net/ieee802154.h"
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
@@ -170,7 +171,7 @@ void kw2xrf_set_sequence(kw2xrf_t *dev, kw2xrf_physeq_t seq)
         /* At 10MHz SPI-Clock, 40000 should be in the magnitue of 0.1s */
         if (max_tries == 40000) {
             DEBUG("kw2xrf_error: device does not finish sequence\n");
-            core_panic(-EBUSY, "kw2xrf_error: device does not finish sequence");
+            core_panic(PANIC_GENERAL_ERROR, "kw2xrf_error: device does not finish sequence");
         }
 
 #endif
@@ -184,40 +185,40 @@ void kw2xrf_set_sequence(kw2xrf_t *dev, kw2xrf_physeq_t seq)
     /* Progrmm new sequence */
     switch (seq) {
         case XCVSEQ_IDLE:
-            dev->state = NETCONF_STATE_SLEEP;
+            dev->state = NETOPT_STATE_SLEEP;
             break;
 
         case XCVSEQ_RECEIVE:
-            dev->state = NETCONF_STATE_IDLE;
+            dev->state = NETOPT_STATE_IDLE;
             break;
 
         case XCVSEQ_TRANSMIT:
-            dev->state = NETCONF_STATE_TX;
+            dev->state = NETOPT_STATE_TX;
             break;
 
         case XCVSEQ_CCA:
-            dev->state = NETCONF_STATE_TX;
+            dev->state = NETOPT_STATE_TX;
             break;
 
         case XCVSEQ_TX_RX:
-            dev->state = NETCONF_STATE_TX;
+            dev->state = NETOPT_STATE_TX;
             break;
 
         case XCVSEQ_CONTINUOUS_CCA:
-            dev->state = NETCONF_STATE_TX;
+            dev->state = NETOPT_STATE_TX;
             break;
 
         default:
             DEBUG("kw2xrf: undefined state assigned to phy\n");
-            dev->state = NETCONF_STATE_IDLE;
+            dev->state = NETOPT_STATE_IDLE;
     }
 
     /* Mapping of TX-sequences depending on AUTOACK flag */
     /* TODO: This should only used in combination with
      *       an CSMA-MAC layer. Currently not working
      */
-    /*if((seq == XCVSEQ_TRANSMIT) || (seq == XCVSEQ_TX_RX)) {
-        if((dev->option) & KW2XRF_OPT_AUTOACK) {
+    /*if ((seq == XCVSEQ_TRANSMIT) || (seq == XCVSEQ_TX_RX)) {
+        if ((dev->option) & KW2XRF_OPT_AUTOACK) {
             seq = XCVSEQ_TX_RX;
         }
         else {
@@ -278,7 +279,7 @@ void kw2xrf_irq_handler(void *args)
     kw2xrf_t *dev = (kw2xrf_t *)args;
 
     /* notify driver thread about the interrupt */
-    msg.type = NG_NETDEV_MSG_TYPE_EVENT;
+    msg.type = GNRC_NETDEV_MSG_TYPE_EVENT;
     msg_send_int(&msg, dev->mac_pid);
 }
 
@@ -315,22 +316,22 @@ int kw2xrf_set_pan(kw2xrf_t *dev, uint16_t pan)
 
 int kw2xrf_get_proto(kw2xrf_t *dev, uint8_t *val, size_t max)
 {
-    if (max < sizeof(ng_nettype_t)) {
+    if (max < sizeof(gnrc_nettype_t)) {
         return -EOVERFLOW;
     }
 
-    memcpy(val, &(dev->proto), sizeof(ng_nettype_t));
-    return sizeof(ng_nettype_t);
+    memcpy(val, &(dev->proto), sizeof(gnrc_nettype_t));
+    return sizeof(gnrc_nettype_t);
 }
 
 int kw2xrf_set_proto(kw2xrf_t *dev, uint8_t *val, size_t len)
 {
-    if (len != sizeof(ng_nettype_t)) {
+    if (len != sizeof(gnrc_nettype_t)) {
         return -EINVAL;
     }
 
-    memcpy(&(dev->proto), val, sizeof(ng_nettype_t));
-    return sizeof(ng_nettype_t);
+    memcpy(&(dev->proto), val, sizeof(gnrc_nettype_t));
+    return sizeof(gnrc_nettype_t);
 }
 
 int kw2xrf_on(kw2xrf_t *dev)
@@ -352,7 +353,7 @@ int kw2xrf_on(kw2xrf_t *dev)
     /* abort any ongoing sequence */
     kw2xrf_set_sequence(dev, XCVSEQ_IDLE);
 
-    dev->state = NETCONF_STATE_SLEEP;
+    dev->state = NETOPT_STATE_SLEEP;
     return 0;
 }
 
@@ -363,6 +364,11 @@ int kw2xrf_set_addr(kw2xrf_t *dev, uint16_t addr)
     val_ar[1] = (uint8_t)addr;
     dev->addr_short[0] = val_ar[0];
     dev->addr_short[1] = val_ar[1];
+#ifdef MODULE_SIXLOWPAN
+    /* https://tools.ietf.org/html/rfc4944#section-12 requires the first bit to
+     * 0 for unicast addresses */
+    dev->addr_short[1] &= 0x7F;
+#endif
     kw2xrf_write_iregs(MKW2XDMI_MACSHORTADDRS0_LSB, val_ar, 2);
     return sizeof(uint16_t);
 }
@@ -397,7 +403,7 @@ int kw2xrf_init(kw2xrf_t *dev, spi_t spi, spi_speed_t spi_speed,
     kw2xrf_spi_init(spi, spi_speed, cs_pin);
 
     if (kw2xrf_on(dev) != 0) {
-        core_panic(0x42, "Could not start MKW2XD radio transceiver");
+        core_panic(PANIC_GENERAL_ERROR, "Could not start MKW2XD radio transceiver");
     }
 
     /* General initialization of interrupt sources.
@@ -434,7 +440,7 @@ int kw2xrf_init(kw2xrf_t *dev, spi_t spi, spi_speed_t spi_speed,
     /* copy and set long address */
     memcpy(&addr_long, cpuid, 8);
     kw2xrf_set_addr_long(dev, NTOHLL(addr_long.uint64.u64));
-    kw2xrf_set_addr(dev, NTOHS(addr_long.uint16[3].u16));
+    kw2xrf_set_addr(dev, NTOHS(addr_long.uint16[0].u16));
 #else
     kw2xrf_set_addr_long(dev, KW2XRF_DEFAULT_SHORT_ADDR);
     kw2xrf_set_addr(dev, KW2XRF_DEFAULT_ADDR_LONG);
@@ -468,7 +474,7 @@ int kw2xrf_init(kw2xrf_t *dev, spi_t spi, spi_speed_t spi_speed,
     return 0;
 }
 
-int kw2xrf_add_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
+int kw2xrf_add_cb(gnrc_netdev_t *dev, gnrc_netdev_event_cb_t cb)
 {
     if (dev == NULL) {
         return -ENODEV;
@@ -482,7 +488,7 @@ int kw2xrf_add_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
     return 0;
 }
 
-int kw2xrf_rem_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
+int kw2xrf_rem_cb(gnrc_netdev_t *dev, gnrc_netdev_event_cb_t cb)
 {
     if (dev == NULL) {
         return -ENODEV;
@@ -494,6 +500,11 @@ int kw2xrf_rem_cb(ng_netdev_t *dev, ng_netdev_event_cb_t cb)
 
     dev->event_cb = NULL;
     return 0;
+}
+
+uint16_t kw2xrf_get_addr_short(kw2xrf_t *dev)
+{
+    return (dev->addr_short[0] << 8) | dev->addr_short[1];
 }
 
 uint64_t kw2xrf_get_addr_long(kw2xrf_t *dev)
@@ -508,7 +519,26 @@ uint64_t kw2xrf_get_addr_long(kw2xrf_t *dev)
     return addr;
 }
 
-int kw2xrf_get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t max_len)
+int8_t kw2xrf_get_cca_threshold(kw2xrf_t *dev)
+{
+    uint8_t tmp;
+    kw2xrf_read_iregs(MKW2XDMI_CCA1_THRESH, &tmp, 1);
+    /* KW2x register value represents absolute value in dBm
+     * default value: -75 dBm
+     */
+    return (-tmp);
+}
+
+void kw2xrf_set_cca_threshold(kw2xrf_t *dev, int8_t value)
+{
+    /* normalize to absolute value */
+    if (value < 0) {
+        value = -value;
+    }
+    kw2xrf_write_iregs(MKW2XDMI_CCA1_THRESH, (uint8_t*)&value, 1);
+}
+
+int kw2xrf_get(gnrc_netdev_t *netdev, netopt_t opt, void *value, size_t max_len)
 {
     kw2xrf_t *dev = (kw2xrf_t *)netdev;
 
@@ -517,15 +547,15 @@ int kw2xrf_get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t ma
     }
 
     switch (opt) {
-        case NETCONF_OPT_ADDRESS:
+        case NETOPT_ADDRESS:
             if (max_len < sizeof(uint16_t)) {
                 return -EOVERFLOW;
             }
 
-            *((uint16_t *)value) = ((dev->addr_short[0] << 8) | dev->addr_short[1]);
+            *((uint16_t *)value) = kw2xrf_get_addr_short(dev);
             return sizeof(uint16_t);
 
-        case NETCONF_OPT_ADDRESS_LONG:
+        case NETOPT_ADDRESS_LONG:
             if (max_len < sizeof(uint64_t)) {
                 return -EOVERFLOW;
             }
@@ -533,7 +563,7 @@ int kw2xrf_get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t ma
             *((uint64_t *)value) = kw2xrf_get_addr_long(dev);
             return sizeof(uint64_t);
 
-        case NETCONF_OPT_ADDR_LEN:
+        case NETOPT_ADDR_LEN:
             if (max_len < sizeof(uint16_t)) {
                 return -EOVERFLOW;
             }
@@ -541,7 +571,7 @@ int kw2xrf_get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t ma
             *((uint16_t *)value) = 2;
             return sizeof(uint16_t);
 
-        case NETCONF_OPT_SRC_LEN:
+        case NETOPT_SRC_LEN:
             if (max_len < sizeof(uint16_t)) {
                 return -EOVERFLOW;
             }
@@ -555,7 +585,7 @@ int kw2xrf_get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t ma
 
             return sizeof(uint16_t);
 
-        case NETCONF_OPT_NID:
+        case NETOPT_NID:
             if (max_len < sizeof(uint16_t)) {
                 return -EOVERFLOW;
             }
@@ -563,21 +593,35 @@ int kw2xrf_get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t ma
             *((uint16_t *)value) = dev->radio_pan;
             return sizeof(uint16_t);
 
-        case NETCONF_OPT_CHANNEL:
+        case NETOPT_IPV6_IID:
+            if (max_len < sizeof(eui64_t)) {
+                return -EOVERFLOW;
+            }
+            if (dev->option & KW2XRF_OPT_SRC_ADDR_LONG) {
+                uint64_t addr = kw2xrf_get_addr_long(dev);
+                ieee802154_get_iid(value, (uint8_t *)&addr, 8);
+            }
+            else {
+                uint16_t addr = kw2xrf_get_addr_short(dev);
+                ieee802154_get_iid(value, (uint8_t *)&addr, 2);
+            }
+            return sizeof(eui64_t);
+
+        case NETOPT_CHANNEL:
             return kw2xrf_get_channel(dev, (uint8_t *)value, max_len);
 
-        case NETCONF_OPT_PROTO:
+        case NETOPT_PROTO:
             return kw2xrf_get_proto(dev, (uint8_t *)value, max_len);
 
-        case NETCONF_OPT_STATE:
-            if (max_len < sizeof(ng_netconf_state_t)) {
+        case NETOPT_STATE:
+            if (max_len < sizeof(netopt_state_t)) {
                 return -EOVERFLOW;
             }
 
-            *(ng_netconf_state_t *)value = *(ng_netconf_state_t *) & (dev->state);
+            *(netopt_state_t *)value = *(netopt_state_t *) & (dev->state);
             return 0;
 
-        case NETCONF_OPT_TX_POWER:
+        case NETOPT_TX_POWER:
             if (max_len < 1) {
                 return -EOVERFLOW;
             }
@@ -585,7 +629,15 @@ int kw2xrf_get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t ma
             *(int16_t *)value = dev->tx_power;
             return 0;
 
-        case NETCONF_OPT_MAX_PACKET_SIZE:
+        case NETOPT_CCA_THRESHOLD:
+            if (max_len < sizeof(uint8_t)) {
+                return -EOVERFLOW;
+            } else {
+            *(int8_t *)value = kw2xrf_get_cca_threshold(dev);
+            }
+            return 0;
+
+        case NETOPT_MAX_PACKET_SIZE:
             if (max_len < sizeof(int16_t)) {
                 return -EOVERFLOW;
             }
@@ -593,21 +645,21 @@ int kw2xrf_get(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t ma
             *((uint16_t *)value) = KW2XRF_MAX_PKT_LENGTH;
             return sizeof(uint16_t);
 
-        case NETCONF_OPT_PRELOADING:
-            *((ng_netconf_enable_t *)value) = !!(dev->option & KW2XRF_OPT_PRELOADING);
-            return sizeof(ng_netconf_enable_t);
+        case NETOPT_PRELOADING:
+            *((netopt_enable_t *)value) = !!(dev->option & KW2XRF_OPT_PRELOADING);
+            return sizeof(netopt_enable_t);
 
-        case NETCONF_OPT_AUTOACK:
-            *((ng_netconf_enable_t *)value) = !!(dev->option & KW2XRF_OPT_AUTOACK);
-            return sizeof(ng_netconf_enable_t);
+        case NETOPT_AUTOACK:
+            *((netopt_enable_t *)value) = !!(dev->option & KW2XRF_OPT_AUTOACK);
+            return sizeof(netopt_enable_t);
 
-        case NETCONF_OPT_PROMISCUOUSMODE:
-            *((ng_netconf_enable_t *)value) = !!(dev->option & KW2XRF_OPT_PROMISCUOUS);
-            return sizeof(ng_netconf_enable_t);
+        case NETOPT_PROMISCUOUSMODE:
+            *((netopt_enable_t *)value) = !!(dev->option & KW2XRF_OPT_PROMISCUOUS);
+            return sizeof(netopt_enable_t);
 
-        case NETCONF_OPT_RAWMODE:
-            *((ng_netconf_enable_t *)value) = !!(dev->option & KW2XRF_OPT_RAWDUMP);
-            return sizeof(ng_netconf_enable_t);
+        case NETOPT_RAWMODE:
+            *((netopt_enable_t *)value) = !!(dev->option & KW2XRF_OPT_RAWDUMP);
+            return sizeof(netopt_enable_t);
 
         default:
             return -ENOTSUP;
@@ -696,7 +748,7 @@ void kw2xrf_set_option(kw2xrf_t *dev, uint16_t option, bool state)
     }
 }
 
-int kw2xrf_set(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t value_len)
+int kw2xrf_set(gnrc_netdev_t *netdev, netopt_t opt, void *value, size_t value_len)
 {
     kw2xrf_t *dev = (kw2xrf_t *)netdev;
 
@@ -705,24 +757,24 @@ int kw2xrf_set(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t va
     }
 
     switch (opt) {
-        case NETCONF_OPT_CHANNEL:
+        case NETOPT_CHANNEL:
             return kw2xrf_set_channel(dev, (uint8_t *)value, value_len);
 
-        case NETCONF_OPT_ADDRESS:
+        case NETOPT_ADDRESS:
             if (value_len > sizeof(uint16_t)) {
                 return -EOVERFLOW;
             }
 
             return kw2xrf_set_addr(dev, *((uint16_t *)value));
 
-        case NETCONF_OPT_ADDRESS_LONG:
+        case NETOPT_ADDRESS_LONG:
             if (value_len > sizeof(uint64_t)) {
                 return -EOVERFLOW;
             }
 
             return kw2xrf_set_addr_long(dev, *((uint64_t *)value));
 
-        case NETCONF_OPT_SRC_LEN:
+        case NETOPT_SRC_LEN:
             if (value_len > sizeof(uint16_t)) {
                 return -EOVERFLOW;
             }
@@ -741,14 +793,14 @@ int kw2xrf_set(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t va
 
             return sizeof(uint16_t);
 
-        case NETCONF_OPT_NID:
+        case NETOPT_NID:
             if (value_len > sizeof(uint16_t)) {
                 return -EOVERFLOW;
             }
 
             return kw2xrf_set_pan(dev, *((uint16_t *)value));
 
-        case NETCONF_OPT_TX_POWER:
+        case NETOPT_TX_POWER:
             if (value_len < sizeof(uint16_t)) {
                 return -EOVERFLOW;
             }
@@ -756,48 +808,56 @@ int kw2xrf_set(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t va
             kw2xrf_set_tx_power(dev, (int8_t *)value, value_len);
             return sizeof(uint16_t);
 
-        case NETCONF_OPT_PROTO:
+        case NETOPT_CCA_THRESHOLD:
+            if (value_len < sizeof(uint8_t)) {
+                return -EOVERFLOW;
+            } else {
+                kw2xrf_set_cca_threshold(dev, *((int8_t*)value));
+            }
+            return sizeof(uint8_t);
+
+        case NETOPT_PROTO:
             return kw2xrf_set_proto(dev, (uint8_t *)value, value_len);
 
-        case NETCONF_OPT_AUTOACK:
+        case NETOPT_AUTOACK:
             /* Set up HW generated automatic ACK after Receive */
             kw2xrf_set_option(dev, KW2XRF_OPT_AUTOACK,
                               ((bool *)value)[0]);
-            return sizeof(ng_netconf_enable_t);
+            return sizeof(netopt_enable_t);
 
-        case NETCONF_OPT_PROMISCUOUSMODE:
+        case NETOPT_PROMISCUOUSMODE:
             kw2xrf_set_option(dev, KW2XRF_OPT_PROMISCUOUS,
                               ((bool *)value)[0]);
-            return sizeof(ng_netconf_enable_t);
+            return sizeof(netopt_enable_t);
 
-        case NETCONF_OPT_RAWMODE:
+        case NETOPT_RAWMODE:
             kw2xrf_set_option(dev, KW2XRF_OPT_RAWDUMP,
                               ((bool *)value)[0]);
-            return sizeof(ng_netconf_enable_t);
+            return sizeof(netopt_enable_t);
 
-        case NETCONF_OPT_PRELOADING:
+        case NETOPT_PRELOADING:
             kw2xrf_set_option(dev, KW2XRF_OPT_PRELOADING,
                               ((bool *)value)[0]);
-            return sizeof(ng_netconf_enable_t);
+            return sizeof(netopt_enable_t);
 
-        case NETCONF_OPT_AUTOCCA:
+        case NETOPT_AUTOCCA:
             kw2xrf_set_option(dev, KW2XRF_OPT_CSMA,
                               ((bool *)value)[0]);
-            return sizeof(ng_netconf_enable_t);
+            return sizeof(netopt_enable_t);
 
-        case NETCONF_OPT_STATE:
-            if (*((ng_netconf_state_t *)value) == NETCONF_STATE_TX) {
+        case NETOPT_STATE:
+            if (*((netopt_state_t *)value) == NETOPT_STATE_TX) {
                 DEBUG("kw2xrf: Sending now.\n");
                 kw2xrf_set_sequence(dev, XCVSEQ_TRANSMIT);
-                return sizeof(ng_netconf_state_t);
+                return sizeof(netopt_state_t);
             }
-            else if (*((ng_netconf_state_t *)value) == NETCONF_STATE_SLEEP) {
+            else if (*((netopt_state_t *)value) == NETOPT_STATE_SLEEP) {
                 kw2xrf_set_sequence(dev, XCVSEQ_IDLE);
-                return sizeof(ng_netconf_state_t);
+                return sizeof(netopt_state_t);
             }
-            else if (*((ng_netconf_state_t *)value) == NETCONF_STATE_IDLE) {
+            else if (*((netopt_state_t *)value) == NETOPT_STATE_IDLE) {
                 kw2xrf_set_sequence(dev, XCVSEQ_RECEIVE);
-                return sizeof(ng_netconf_state_t);
+                return sizeof(netopt_state_t);
             }
 
             /* TODO: Implement Off state here, when LPM functions are implemented */
@@ -807,7 +867,7 @@ int kw2xrf_set(ng_netdev_t *netdev, ng_netconf_opt_t opt, void *value, size_t va
     }
 }
 
-/* TODO: generalize and move to ng_ieee802154 */
+/* TODO: generalize and move to ieee802154 */
 /* TODO: include security header implications */
 static size_t _get_frame_hdr_len(uint8_t *mhr)
 {
@@ -815,32 +875,32 @@ static size_t _get_frame_hdr_len(uint8_t *mhr)
     size_t len = 3;
 
     /* figure out address sizes */
-    tmp = (mhr[1] & NG_IEEE802154_FCF_DST_ADDR_MASK);
+    tmp = (mhr[1] & IEEE802154_FCF_DST_ADDR_MASK);
 
-    if (tmp == NG_IEEE802154_FCF_DST_ADDR_SHORT) {
+    if (tmp == IEEE802154_FCF_DST_ADDR_SHORT) {
         len += 4;
     }
-    else if (tmp == NG_IEEE802154_FCF_DST_ADDR_LONG) {
+    else if (tmp == IEEE802154_FCF_DST_ADDR_LONG) {
         len += 10;
     }
-    else if (tmp != NG_IEEE802154_FCF_DST_ADDR_VOID) {
+    else if (tmp != IEEE802154_FCF_DST_ADDR_VOID) {
         return 0;
     }
 
-    tmp = (mhr[1] & NG_IEEE802154_FCF_SRC_ADDR_MASK);
+    tmp = (mhr[1] & IEEE802154_FCF_SRC_ADDR_MASK);
 
-    if (tmp == NG_IEEE802154_FCF_SRC_ADDR_VOID) {
+    if (tmp == IEEE802154_FCF_SRC_ADDR_VOID) {
         return len;
     }
     else {
-        if (!(mhr[0] & NG_IEEE802154_FCF_PAN_COMP)) {
+        if (!(mhr[0] & IEEE802154_FCF_PAN_COMP)) {
             len += 2;
         }
 
-        if (tmp == NG_IEEE802154_FCF_SRC_ADDR_SHORT) {
+        if (tmp == IEEE802154_FCF_SRC_ADDR_SHORT) {
             return (len + 2);
         }
-        else if (tmp == NG_IEEE802154_FCF_SRC_ADDR_LONG) {
+        else if (tmp == IEEE802154_FCF_SRC_ADDR_LONG) {
             return (len + 8);
         }
     }
@@ -848,22 +908,22 @@ static size_t _get_frame_hdr_len(uint8_t *mhr)
     return 0;
 }
 
-/* TODO: generalize and move to ng_ieee802154 */
-static ng_pktsnip_t *_make_netif_hdr(uint8_t *mhr)
+/* TODO: generalize and move to (gnrc_)ieee802154 */
+static gnrc_pktsnip_t *_make_netif_hdr(uint8_t *mhr)
 {
     uint8_t tmp;
     uint8_t *addr;
     uint8_t src_len, dst_len;
-    ng_pktsnip_t *snip;
-    ng_netif_hdr_t *hdr;
+    gnrc_pktsnip_t *snip;
+    gnrc_netif_hdr_t *hdr;
 
     /* figure out address sizes */
-    tmp = mhr[1] & NG_IEEE802154_FCF_SRC_ADDR_MASK;
+    tmp = mhr[1] & IEEE802154_FCF_SRC_ADDR_MASK;
 
-    if (tmp == NG_IEEE802154_FCF_SRC_ADDR_SHORT) {
+    if (tmp == IEEE802154_FCF_SRC_ADDR_SHORT) {
         src_len = 2;
     }
-    else if (tmp == NG_IEEE802154_FCF_SRC_ADDR_LONG) {
+    else if (tmp == IEEE802154_FCF_SRC_ADDR_LONG) {
         src_len = 8;
     }
     else if (tmp == 0) {
@@ -873,12 +933,12 @@ static ng_pktsnip_t *_make_netif_hdr(uint8_t *mhr)
         return NULL;
     }
 
-    tmp = mhr[1] & NG_IEEE802154_FCF_DST_ADDR_MASK;
+    tmp = mhr[1] & IEEE802154_FCF_DST_ADDR_MASK;
 
-    if (tmp == NG_IEEE802154_FCF_DST_ADDR_SHORT) {
+    if (tmp == IEEE802154_FCF_DST_ADDR_SHORT) {
         dst_len = 2;
     }
-    else if (tmp == NG_IEEE802154_FCF_DST_ADDR_LONG) {
+    else if (tmp == IEEE802154_FCF_DST_ADDR_LONG) {
         dst_len = 8;
     }
     else if (tmp == 0) {
@@ -889,20 +949,20 @@ static ng_pktsnip_t *_make_netif_hdr(uint8_t *mhr)
     }
 
     /* allocate space for header */
-    snip = ng_pktbuf_add(NULL, NULL, sizeof(ng_netif_hdr_t) + src_len + dst_len,
-                         NG_NETTYPE_NETIF);
+    snip = gnrc_pktbuf_add(NULL, NULL, sizeof(gnrc_netif_hdr_t) + src_len + dst_len,
+                           GNRC_NETTYPE_NETIF);
 
     if (snip == NULL) {
         return NULL;
     }
 
     /* fill header */
-    hdr = (ng_netif_hdr_t *)snip->data;
-    ng_netif_hdr_init(hdr, src_len, dst_len);
+    hdr = (gnrc_netif_hdr_t *)snip->data;
+    gnrc_netif_hdr_init(hdr, src_len, dst_len);
 
     if (dst_len > 0) {
         tmp = 5 + dst_len;
-        addr = ng_netif_hdr_get_dst_addr(hdr);
+        addr = gnrc_netif_hdr_get_dst_addr(hdr);
 
         for (int i = 0; i < dst_len; i++) {
             addr[i] = mhr[5 + (dst_len - i) - 1];
@@ -912,12 +972,12 @@ static ng_pktsnip_t *_make_netif_hdr(uint8_t *mhr)
         tmp = 3;
     }
 
-    if (!(mhr[0] & NG_IEEE802154_FCF_PAN_COMP)) {
+    if (!(mhr[0] & IEEE802154_FCF_PAN_COMP)) {
         tmp += 2;
     }
 
     if (src_len > 0) {
-        addr = ng_netif_hdr_get_src_addr(hdr);
+        addr = gnrc_netif_hdr_get_src_addr(hdr);
 
         for (int i = 0; i < src_len; i++) {
             addr[i] = mhr[tmp + (src_len - i) - 1];
@@ -930,8 +990,8 @@ static ng_pktsnip_t *_make_netif_hdr(uint8_t *mhr)
 void _receive_data(kw2xrf_t *dev)
 {
     size_t pkt_len, hdr_len;
-    ng_pktsnip_t *hdr, *payload = NULL;
-    ng_netif_hdr_t *netif;
+    gnrc_pktsnip_t *hdr, *payload = NULL;
+    gnrc_netif_hdr_t *netif;
 
     /* get size of the received packet */
     pkt_len = kw2xrf_read_dreg(MKW2XDM_RX_FRM_LEN);
@@ -946,7 +1006,7 @@ void _receive_data(kw2xrf_t *dev)
 
     /* If RAW-mode is selected direclty forward pkt, MAC does the rest */
     if (dev->option & KW2XRF_OPT_RAWDUMP) {
-        payload = ng_pktbuf_add(NULL, NULL, pkt_len, NG_NETTYPE_UNDEF);
+        payload = gnrc_pktbuf_add(NULL, NULL, pkt_len, GNRC_NETTYPE_UNDEF);
 
         if (payload == NULL) {
             DEBUG("kw2xf: error: unable to allocate RAW data\n");
@@ -975,7 +1035,7 @@ void _receive_data(kw2xrf_t *dev)
     }
 
     /* fill missing fields in netif header */
-    netif = (ng_netif_hdr_t *)hdr->data;
+    netif = (gnrc_netif_hdr_t *)hdr->data;
     netif->if_pid = thread_getpid();
     netif->lqi = dev->buf[pkt_len];
     /* lqi and rssi are directly related to each other in the kw2x-device.
@@ -984,19 +1044,19 @@ void _receive_data(kw2xrf_t *dev)
      */
     netif->rssi = -((netif->lqi) - 286.6) / 2.69333;
 
-    payload = ng_pktbuf_add(hdr, (void *) & (dev->buf[hdr_len]),
-                            pkt_len - hdr_len - 2, dev->proto);
+    payload = gnrc_pktbuf_add(hdr, (void *) & (dev->buf[hdr_len]),
+                              pkt_len - hdr_len - 2, dev->proto);
 
     if (payload == NULL) {
         DEBUG("kw2xrf: ERROR allocating payload in packet buffer on RX\n");
-        ng_pktbuf_release(hdr);
+        gnrc_pktbuf_release(hdr);
         return;
     }
 
     dev->event_cb(NETDEV_EVENT_RX_COMPLETE, payload);
 }
 
-void kw2xrf_isr_event(ng_netdev_t *netdev, uint32_t event_type)
+void kw2xrf_isr_event(gnrc_netdev_t *netdev, uint32_t event_type)
 {
     kw2xrf_t *dev = (kw2xrf_t *)netdev;
     uint8_t irqst1 = kw2xrf_read_dreg(MKW2XDM_IRQSTS1);
@@ -1040,38 +1100,29 @@ void kw2xrf_isr_event(ng_netdev_t *netdev, uint32_t event_type)
     }
 }
 
-/* TODO: Move to ng_ieee802.15.4 as soon as ready */
-int _assemble_tx_buf(kw2xrf_t *dev, ng_pktsnip_t *pkt)
+/* TODO: Move to gnrc_ieee802.15.4 as soon as ready */
+int _assemble_tx_buf(kw2xrf_t *dev, gnrc_pktsnip_t *pkt)
 {
-    ng_netif_hdr_t *hdr;
-    hdr = (ng_netif_hdr_t *)pkt->data;
-    int index = 0;
+    gnrc_netif_hdr_t *hdr;
+    int index = 4;
 
     if (dev == NULL) {
-        ng_pktbuf_release(pkt);
-        return -ENODEV;
+        return 0;
     }
 
     /* get netif header check address length */
-    hdr = (ng_netif_hdr_t *)pkt->data;
+    hdr = (gnrc_netif_hdr_t *)pkt->data;
 
-    /* FCF, set up data frame, request for ack, panid_compression */
-    /* TODO: Currently we don´t request for Ack in this device.
-     * since this is a soft_mac device this has to be
-     * handled in a upcoming CSMA-MAC layer.
-     */
-    /*if(dev->option & KW2XRF_OPT_AUTOACK) {
-        dev->buf[1] = 0x61;
+    /* we are building a data frame here */
+    dev->buf[1] = IEEE802154_FCF_TYPE_DATA;
+    dev->buf[2] = IEEE802154_FCF_VERS_V0;
+
+    /* if AUTOACK is enabled, then we also expect ACKs for this packet */
+    if (!(hdr->flags & GNRC_NETIF_HDR_FLAGS_BROADCAST) &&
+        !(hdr->flags & GNRC_NETIF_HDR_FLAGS_MULTICAST) &&
+        (dev->option & KW2XRF_OPT_AUTOACK)) {
+        dev->buf[1] |= IEEE802154_FCF_ACK_REQ;
     }
-    else {
-        dev->buf[1] = 0x51;
-    }*/
-    dev->buf[1] = 0x51;
-
-    /* set sequence number */
-    dev->buf[3] = dev->seq_nr++;
-
-    index = 4;
 
     /* set destination pan_id */
     dev->buf[index++] = (uint8_t)((dev->radio_pan) & 0xff);
@@ -1079,50 +1130,60 @@ int _assemble_tx_buf(kw2xrf_t *dev, ng_pktsnip_t *pkt)
 
     /* fill in destination address */
     if (hdr->flags &
-        (NG_NETIF_HDR_FLAGS_BROADCAST | NG_NETIF_HDR_FLAGS_MULTICAST)) {
-        dev->buf[2] = 0x88;
+        (GNRC_NETIF_HDR_FLAGS_BROADCAST | GNRC_NETIF_HDR_FLAGS_MULTICAST)) {
+        dev->buf[2] |= IEEE802154_FCF_DST_ADDR_SHORT;
         dev->buf[index++] = 0xff;
         dev->buf[index++] = 0xff;
-        /* set source address */
-        dev->buf[index++] = (uint8_t)(dev->addr_short[0]);
-        dev->buf[index++] = (uint8_t)(dev->addr_short[1]);
     }
     else if (hdr->dst_l2addr_len == 2) {
         /* set to short addressing mode */
-        dev->buf[2] = 0x88;
+        dev->buf[2] |= IEEE802154_FCF_DST_ADDR_SHORT;
         /* set destination address, byte order is inverted */
-        dev->buf[index++] = (ng_netif_hdr_get_dst_addr(hdr))[1];
-        dev->buf[index++] = (ng_netif_hdr_get_dst_addr(hdr))[0];
-        /* set source pan_id */
-        //dev->buf[index++] = (uint8_t)((dev->radio_pan) >> 8);
-        //dev->buf[index++] = (uint8_t)((dev->radio_pan) & 0xff);
-        /* set source address */
-        dev->buf[index++] = (uint8_t)(dev->addr_short[0]);
-        dev->buf[index++] = (uint8_t)(dev->addr_short[1]);
+        uint8_t *dst_addr = gnrc_netif_hdr_get_dst_addr(hdr);
+        dev->buf[index++] = dst_addr[1];
+        dev->buf[index++] = dst_addr[0];
     }
     else if (hdr->dst_l2addr_len == 8) {
         /* default to use long address mode for src and dst */
-        dev->buf[2] |= 0xcc;
-        /* set destination address located directly after ng_ifhrd_t in memory */
-        memcpy(&(dev->buf)[index], ng_netif_hdr_get_dst_addr(hdr), 8);
-        index += 8;
-        /* set source pan_id, wireshark expects it there */
-        //dev->buf[index++] = (uint8_t)((dev->radio_pan) >> 8);
-        //dev->buf[index++] = (uint8_t)((dev->radio_pan) & 0xff);
+        dev->buf[2] |= IEEE802154_FCF_DST_ADDR_LONG;
+        /* set destination address located directly after gnrc_ifhrd_t in memory */
+        uint8_t *dst_addr = gnrc_netif_hdr_get_dst_addr(hdr);
+        for (int i = 7;  i >= 0; i--) {
+            dev->buf[index++] = dst_addr[i];
+        }
+    }
+    else {
+        return 0;
+    }
 
-        /* set source address */
+    /* fill in source PAN ID (if applicable */
+    if (dev->option & KW2XRF_OPT_USE_SRC_PAN) {
+        dev->buf[index++] = (uint8_t)((dev->radio_pan) & 0xff);
+        dev->buf[index++] = (uint8_t)((dev->radio_pan) >> 8);
+    }
+    else {
+        dev->buf[1] |= IEEE802154_FCF_PAN_COMP;
+    }
+
+    /* insert source address according to length */
+    if (hdr->src_l2addr_len == 2) {
+        dev->buf[2] |= IEEE802154_FCF_SRC_ADDR_SHORT;
+        dev->buf[index++] = (uint8_t)(dev->addr_short[0]);
+        dev->buf[index++] = (uint8_t)(dev->addr_short[1]);
+    }
+    else {
+        dev->buf[2] |= IEEE802154_FCF_SRC_ADDR_LONG;
         memcpy(&(dev->buf[index]), dev->addr_long, 8);
         index += 8;
     }
-    else {
-        ng_pktbuf_release(pkt);
-        return -ENOMSG;
-    }
+    /* set sequence number */
+    dev->buf[3] = dev->seq_nr++;
 
+    /* return header size */
     return index;
 }
 
-int kw2xrf_send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
+int kw2xrf_send(gnrc_netdev_t *netdev, gnrc_pktsnip_t *pkt)
 {
     int index = 0;
     kw2xrf_t *dev = (kw2xrf_t *) netdev;
@@ -1131,22 +1192,27 @@ int kw2xrf_send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
         return -ENOMSG;
     }
 
-    ng_pktsnip_t *payload = pkt->next;
+    gnrc_pktsnip_t *payload = pkt->next;
 
     if (netdev == NULL) {
-        ng_pktbuf_release(pkt);
+        gnrc_pktbuf_release(pkt);
         return -ENODEV;
     }
 
-    if (pkt->type == NG_NETTYPE_NETIF) {
+    if (pkt->type == GNRC_NETTYPE_NETIF) {
         /* Build header and fills this already into the tx-buf */
         index = _assemble_tx_buf(dev, pkt);
-        DEBUG("Assembled header for NG_NETTYPE_UNDEF to tx-buf, index: %i\n", index);
+        if (index == 0) {
+            DEBUG("Unable to create 802.15.4 header\n");
+            gnrc_pktbuf_release(pkt);
+            return -ENOMSG;
+        }
+        DEBUG("Assembled header for GNRC_NETTYPE_UNDEF to tx-buf, index: %i\n", index);
     }
-    else if (pkt->type == NG_NETTYPE_UNDEF) {
+    else if (pkt->type == GNRC_NETTYPE_UNDEF) {
         /* IEEE packet is already included in the header,
          * no need to build the header manually */
-        DEBUG("Incoming packet of type NG_NETTYPE_802154: %i\n", index);
+        DEBUG("Incoming packet of type GNRC_NETTYPE_802154: %i\n", index);
         DEBUG("size of pktsnip: %i\n", pkt->size);
 
         for (int i = 0; i < pkt->size; i++) {
@@ -1165,7 +1231,7 @@ int kw2xrf_send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
     while (payload) {
         /* check we don't exceed FIFO size */
         if (index + 2 + payload->size > KW2XRF_MAX_PKT_LENGTH) {
-            ng_pktbuf_release(pkt);
+            gnrc_pktbuf_release(pkt);
             DEBUG("Packet exceeded FIFO size.\n");
             return -ENOBUFS;
         }
@@ -1184,11 +1250,11 @@ int kw2xrf_send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
 
     dev->buf[0] = index + 1; /* set packet size */
 
-    ng_pktbuf_release(pkt);
+    gnrc_pktbuf_release(pkt);
     DEBUG("kw2xrf: packet with size %i loaded to tx_buf\n", dev->buf[0]);
     kw2xrf_write_fifo(dev->buf, dev->buf[0]);
 
-    if ((dev->option & KW2XRF_OPT_PRELOADING) == NETCONF_DISABLE) {
+    if ((dev->option & KW2XRF_OPT_PRELOADING) == NETOPT_DISABLE) {
         DEBUG("kw2xrf: Sending now.\n");
         kw2xrf_set_sequence(dev, XCVSEQ_TRANSMIT);
     }
@@ -1197,7 +1263,7 @@ int kw2xrf_send(ng_netdev_t *netdev, ng_pktsnip_t *pkt)
 }
 
 /* implementation of the netdev interface */
-const ng_netdev_driver_t kw2xrf_driver = {
+const gnrc_netdev_driver_t kw2xrf_driver = {
     .send_data = kw2xrf_send,
     .add_event_callback = kw2xrf_add_cb,
     .rem_event_callback = kw2xrf_rem_cb,

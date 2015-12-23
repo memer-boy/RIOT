@@ -14,10 +14,6 @@
 #include "sched.h"
 #include "thread.h"
 
-volatile int __inISR = 0;
-
-char __isr_stack[MSP430_ISR_STACK_SIZE];
-
 /*
  * we must prevent the compiler to generate a prologue or an epilogue
  * for thread_yield_higher(), since we rely on the RETI instruction at the end
@@ -25,18 +21,15 @@ char __isr_stack[MSP430_ISR_STACK_SIZE];
  */
 __attribute__((naked)) void thread_yield_higher(void)
 {
-    /*
-     * disable IRQ, remembering if they are
-     * to be reactivated after context switch
-     */
-    unsigned int irqen = disableIRQ();
+    __asm__("push r2"); /* save SR */
+    __disable_irq();
 
     __save_context();
 
     /* have sched_active_thread point to the next thread */
     sched_run();
 
-    __restore_context(irqen);
+    __restore_context();
 
     UNREACHABLE();
 }
@@ -46,7 +39,7 @@ NORETURN void cpu_switch_context_exit(void)
     sched_active_thread = sched_threads[0];
     sched_run();
 
-    __restore_context(GIE);
+    __restore_context();
 
     UNREACHABLE();
 }
@@ -95,11 +88,6 @@ char *thread_stack_init(thread_task_func_t task_func, void *arg, void *stack_sta
     }
 
     return (char *) stackptr;
-}
-
-int inISR(void)
-{
-    return __inISR;
 }
 
 /******************************************************************************/

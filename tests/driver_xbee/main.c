@@ -22,37 +22,32 @@
 
 #include "shell.h"
 #include "shell_commands.h"
-#include "net/ng_netbase.h"
-#include "net/ng_pktdump.h"
-
-/**
- * @brief   Buffer size used by the shell
- */
-#define SHELL_BUFSIZE           (64U)
+#include "net/gnrc.h"
+#include "net/gnrc/pktdump.h"
 
 /**
  * @brief   Maybe you are a golfer?!
  */
 int main(void)
 {
-    shell_t shell;
-    ng_netreg_entry_t dump;
+    gnrc_netreg_entry_t dump;
 
     puts("Xbee S1 device driver test");
 
     /* initialize and register pktdump */
-    dump.pid = ng_pktdump_getpid();
+    dump.pid = gnrc_pktdump_getpid();
     if (dump.pid <= KERNEL_PID_UNDEF) {
         puts("Error starting pktdump thread");
         return -1;
     }
-    dump.demux_ctx = NG_NETREG_DEMUX_CTX_ALL;
-    ng_netreg_register(NG_NETTYPE_UNDEF, &dump);
+    dump.demux_ctx = GNRC_NETREG_DEMUX_CTX_ALL;
+    gnrc_netreg_register(GNRC_NETTYPE_UNDEF, &dump);
 
     /* start the shell */
     puts("Initialization OK, starting shell now");
-    shell_init(&shell, NULL, SHELL_BUFSIZE, getchar, putchar);
-    shell_run(&shell);
+
+    char line_buf[SHELL_DEFAULT_BUFSIZE];
+    shell_run(NULL, line_buf, SHELL_DEFAULT_BUFSIZE);
 
     return 0;
 }

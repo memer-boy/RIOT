@@ -17,8 +17,8 @@
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
  */
 
-#ifndef __PERIPH_CONF_H
-#define __PERIPH_CONF_H
+#ifndef PERIPH_CONF_H_
+#define PERIPH_CONF_H_
 
 #ifdef __cplusplus
  extern "C" {
@@ -59,7 +59,7 @@
 #define TIMER_1_DEV         NRF_TIMER1
 #define TIMER_1_CHANNELS    3
 #define TIMER_1_MAX_VALUE   (0xffff)
-#define TIEMR_1_BITMODE     TIMER_BITMODE_BITMODE_16Bit
+#define TIMER_1_BITMODE     TIMER_BITMODE_BITMODE_16Bit
 #define TIMER_1_ISR         isr_timer1
 #define TIMER_1_IRQ         TIMER1_IRQn
 
@@ -74,14 +74,11 @@
 
 /**
  * @name UART configuration
+ *
+ * The CPU only supports one UART device, so we keep it simple
  * @{
  */
 #define UART_NUMOF          (1U)
-#define UART_0_EN           1
-#define UART_IRQ_PRIO       1
-
-/* UART 0 device configuration */
-#define UART_DEV            NRF_UART0
 #define UART_PIN_RX         17
 #define UART_PIN_TX         18
 /** @} */
@@ -124,6 +121,22 @@
 /** @} */
 
 /**
+ * @name ADC configuration
+ * @{
+ */
+#define ADC_NUMOF           (1U)
+#define ADC_0_EN            1
+#define ADC_MAX_CHANNELS    4
+
+/* ADC 0 device configuration */
+#define ADC_0_CHANNELS      4
+#define ADC_0_CH0           ADC_CONFIG_PSEL_AnalogInput3
+#define ADC_0_CH1           ADC_CONFIG_PSEL_AnalogInput4
+#define ADC_0_CH2           ADC_CONFIG_PSEL_AnalogInput5
+#define ADC_0_CH3           ADC_CONFIG_PSEL_AnalogInput6
+/** @} */
+
+/**
  * @name Radio device configuration
  *
  * The radio is not guarded by a NUMOF define, as the radio is selected by its
@@ -137,4 +150,4 @@
 } /* end extern "C" */
 #endif
 
-#endif /* __PERIPH_CONF_H */
+#endif /* PERIPH_CONF_H_ */

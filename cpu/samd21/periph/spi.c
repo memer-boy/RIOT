@@ -16,7 +16,7 @@
  * @author      Thomas Eichinger <thomas.eichinger@fu-berlin.de>
  * @author      Troels Hoffmeyer <troels.d.hoffmeyer@gmail.com>
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
- * @author      Joakim Gebart <joakim.gebart@eistec.se>
+ * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se>
  *
  * @}
  */
@@ -200,7 +200,7 @@ int spi_init_master(spi_t dev, spi_conf_t conf, spi_speed_t speed)
 int spi_init_slave(spi_t dev, spi_conf_t conf, char (*cb)(char))
 {
     /* TODO */
-    return 0;
+    return -1;
 }
 
 void spi_transmission_begin(spi_t dev, char reset_val)
@@ -256,47 +256,6 @@ int spi_transfer_byte(spi_t dev, char out, char *in)
         in[0] = tmp;
     }
     return 1;
-}
-
-int spi_transfer_bytes(spi_t dev, char *out, char *in, unsigned int length)
-{
-    int transfered = 0;
-
-    if (out != NULL) {
-        DEBUG("out*: %p out: %x length: %x\n", out, *out, length);
-        while (length--) {
-            int ret = spi_transfer_byte(dev, *(out)++, 0);
-            if (ret <  0) {
-                return ret;
-            }
-            transfered += ret;
-        }
-    }
-    if (in != NULL) {
-        while (length--) {
-            int ret = spi_transfer_byte(dev, 0, in++);
-            if (ret <  0) {
-                return ret;
-            }
-            transfered += ret;
-        }
-        DEBUG("in*: %p in: %x transfered: %x\n", in, *(in-transfered), transfered);
-    }
-
-    DEBUG("sent %x byte(s)\n", transfered);
-    return transfered;
-}
-
-int spi_transfer_reg(spi_t dev, uint8_t reg, char out, char *in)
-{
-    spi_transfer_byte(dev, reg, NULL);
-    return spi_transfer_byte(dev, out, in);
-}
-
-int spi_transfer_regs(spi_t dev, uint8_t reg, char *out, char *in, unsigned int length)
-{
-    spi_transfer_byte(dev, reg, NULL);
-    return spi_transfer_bytes(dev, out, in, length);
 }
 
 void spi_poweron(spi_t dev)

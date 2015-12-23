@@ -16,7 +16,6 @@
 #include "periph_conf.h"
 #include "thread.h"
 #include "sched.h"
-#include "vtimer.h"
 #include "mutex.h"
 
 #define ENABLE_DEBUG (0)
@@ -36,7 +35,7 @@
  *
  * @author      Peter Kietzmann <peter.kietzmann@haw-hamburg.de>
  * @author      Johann Fischer <j.fischer@phytec.de>
- * @author      Joakim Gebart <joakim.gebart@eistec.se>
+ * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se>
  *
  * @}
  */
@@ -852,7 +851,7 @@ int spi_init_slave(spi_t dev, spi_conf_t conf, char(*cb)(char data))
 
 int spi_acquire(spi_t dev)
 {
-    if (dev >= SPI_NUMOF) {
+    if ((unsigned int)dev >= SPI_NUMOF) {
         return -1;
     }
 
@@ -862,7 +861,7 @@ int spi_acquire(spi_t dev)
 
 int spi_release(spi_t dev)
 {
-    if (dev >= SPI_NUMOF) {
+    if ((unsigned int)dev >= SPI_NUMOF) {
         return -1;
     }
 
@@ -1258,7 +1257,7 @@ int spi_transfer_regs(spi_t dev, uint8_t reg, char *out, char *in, unsigned int 
     byte_out = reg;
 
     /* Send register address */
-    byte_in = spi_transfer_internal(spi_dev, flags, byte_out);
+    spi_transfer_internal(spi_dev, flags, byte_out);
 
     /* Default: send idle data */
     byte_out = (uint8_t)SPI_IDLE_DATA;

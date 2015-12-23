@@ -677,11 +677,10 @@ typedef struct gpio {
     __IO uint32_t FIOPIN;
     __IO uint32_t FIOSET;
     __IO uint32_t FIOCLR;
-} gpio_t;
+} lpc_gpio_t;
 
 /* LPC_GPIO[x] */
-#define LPC_GPIO        ((gpio_t *)(GPIO_BASE))
-
+#define LPC_GPIO        ((lpc_gpio_t *)(GPIO_BASE))
 
 /* UARTs */
 typedef struct uart {
@@ -745,77 +744,152 @@ typedef struct uart {
         } FCR;
     };
 
-	struct {
-		__IO uint32_t WORD_LEN : 2;
-		__IO uint32_t STOP_BIT : 1;
-		__IO uint32_t PARITY_EN : 1;
-		__IO uint32_t PARITY_SEL : 2;
-		__IO uint32_t BREAK_CTL : 1;
-		__IO uint32_t DLAB : 1;
-		__IO uint32_t : 24;
-	} LCR;
+    struct {
+        __IO uint32_t WORD_LEN : 2;
+        __IO uint32_t STOP_BIT : 1;
+        __IO uint32_t PARITY_EN : 1;
+        __IO uint32_t PARITY_SEL : 2;
+        __IO uint32_t BREAK_CTL : 1;
+        __IO uint32_t DLAB : 1;
+        __IO uint32_t : 24;
+    } LCR;
 
-	__I uint32_t RESERVED0;
+    __I uint32_t RESERVED0;
 
-	struct {
-		__I uint32_t RDR : 1;
-		__I uint32_t OE : 1;
-		__I uint32_t PE : 1;
-		__I uint32_t FE : 1;
-		__I uint32_t BI : 1;
-		__I uint32_t THRE : 1;
-		__I uint32_t TEMT : 1;
-		__I uint32_t RXFE : 1;
-		__I uint32_t : 24;
-	} LSR;
+    struct {
+        __I uint32_t RDR : 1;
+        __I uint32_t OE : 1;
+        __I uint32_t PE : 1;
+        __I uint32_t FE : 1;
+        __I uint32_t BI : 1;
+        __I uint32_t THRE : 1;
+        __I uint32_t TEMT : 1;
+        __I uint32_t RXFE : 1;
+        __I uint32_t : 24;
+    } LSR;
 
     __I uint32_t RESERVED1;
 
-	struct {
-		__IO uint32_t SCR : 8;
-		__IO uint32_t : 24;
-	};
+    struct {
+        __IO uint32_t SCR : 8;
+        __IO uint32_t : 24;
+    };
 
-	struct {
-		__IO uint32_t START : 1;
-		__IO uint32_t MODE : 1;
-		__IO uint32_t AUTORESTART : 1;
-		__IO uint32_t : 5;
-		__IO uint32_t ABEOIntClr : 1;
-		__IO uint32_t ABTOIntClr : 1;
-		__IO uint32_t : 22;
-	} ACR;
+    struct {
+        __IO uint32_t START : 1;
+        __IO uint32_t MODE : 1;
+        __IO uint32_t AUTORESTART : 1;
+        __IO uint32_t : 5;
+        __IO uint32_t ABEOIntClr : 1;
+        __IO uint32_t ABTOIntClr : 1;
+        __IO uint32_t : 22;
+    } ACR;
 
-	struct {
-		__IO uint32_t IrDAEn : 1;
-		__IO uint32_t IrDAInv : 1;
-		__IO uint32_t FixPulseEn : 1;
-		__IO uint32_t PulseDiv : 3;
-		__IO uint32_t : 26;
-	} ICR;
+    struct {
+        __IO uint32_t IrDAEn : 1;
+        __IO uint32_t IrDAInv : 1;
+        __IO uint32_t FixPulseEn : 1;
+        __IO uint32_t PulseDiv : 3;
+        __IO uint32_t : 26;
+    } ICR;
 
-	struct {
-		__IO uint32_t DIVADDVAL : 4;
-		__IO uint32_t MULVAL : 4;
-		__IO uint32_t : 24;
-	} FDR;
+    struct {
+        __IO uint32_t DIVADDVAL : 4;
+        __IO uint32_t MULVAL : 4;
+        __IO uint32_t : 24;
+    } FDR;
 
     __I uint32_t RESERVED2;
 
-	struct {
-		__IO uint32_t : 7;
-		__IO uint32_t TXEN : 1;
-		__IO uint32_t : 24;
-	} TER;
+    struct {
+        __IO uint32_t : 7;
+        __IO uint32_t TXEN : 1;
+        __IO uint32_t : 24;
+    } TER;
 } uartx_t;
 
 #define LPC_UART0       (*((uartx_t *) UART0_BASE))
 #define LPC_UART2       (*((uartx_t *) UART2_BASE))
 #define LPC_UART3       (*((uartx_t *) UART3_BASE))
 
+/* Legacy SPI */
+typedef struct spi0 {
+
+    struct {
+        __I uint32_t : 2;
+        __IO uint32_t BitEnable : 1;
+        __IO uint32_t CPHA : 1;
+        __IO uint32_t CPOL : 1;
+        __IO uint32_t MSTR : 1;
+        __IO uint32_t LSBF : 1;
+        __IO uint32_t SPIE : 1;
+        __IO uint32_t BITS : 4;
+        __I uint32_t : 20;
+    } S0SPCR;
+
+    struct {
+        __I uint32_t : 3;
+        __IO uint32_t ABRT : 1;
+        __IO uint32_t MODF : 1;
+        __IO uint32_t ROVR : 1;
+        __IO uint32_t WCOL : 1;
+        __IO uint32_t SPIF : 1;
+        __I uint32_t : 24;
+    } S0SPSR;
+
+    struct {
+        __IO uint32_t DataLow : 8;
+        __IO uint32_t DataHigh : 8;
+        __I uint32_t : 16;
+    } S0SPDR;
+
+    struct {
+        __IO uint32_t Counter : 8;
+        __I uint32_t : 24;
+    } S0SPCCR;
+    __I uint32_t RESERVER0;
+    __I uint32_t RESERVER1;
+
+    struct {
+        __IO uint32_t SPIF : 1;
+        __I uint32_t : 31;
+    } S0SPINT;
+} lpc_spi_t;
+
+#define LPC_SPI0        (*((lpc_spi_t *) SPI0_BASE))
 #ifdef	__cplusplus
 }
 #endif
 
+/* GPDMA controler */
+typedef struct gpdmac {
+    __IO uint32_t DMACIntStat;
+    __IO uint32_t DMACIntTCStat;
+    __IO uint32_t DMACIntTCClear;
+    __IO uint32_t DMACIntErrStat;
+    __IO uint32_t DMACIntErrClr;
+    __IO uint32_t DMACRawIntTCStat;
+    __IO uint32_t DMACRawIntEStat;
+    __IO uint32_t DMACEnbldChns;
+    __IO uint32_t DMACSoftBReq;
+    __IO uint32_t DMACSoftSReq;
+    __IO uint32_t DMACSoftLBReq;
+    __IO uint32_t DMACSoftLSReq;
+    __IO uint32_t DMACConfig;
+    __IO uint32_t DMACSync;
+    __IO uint32_t DMACReqSel;
+} lpc_gpdmac_t;
+
+typedef struct gpdmacc {
+    __IO uint32_t DMACCSrcAddr;
+    __IO uint32_t DMACCDstAddr;
+    __IO uint32_t DMACCLLI;
+    __IO uint32_t DMACCControl;
+    __IO uint32_t DMACCConfig;
+} lpc_gpdmacc_t;
+
+
+#define LPC_GPDMAC      (*((lpc_gpdmac_t *) GPDMAC_BASE))
+#define LPC_GPDMACC     (*((lpc_gpdmacc_t *) GPDMACH0_BASE))
 #endif	/* CPUVARS_H */
 

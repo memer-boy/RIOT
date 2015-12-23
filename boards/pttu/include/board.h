@@ -18,8 +18,8 @@
  * @author      Kaspar Schleiser <kaspar@schleiser.de>
  */
 
-#ifndef __BOARD_H
-#define __BOARD_H
+#ifndef BOARD_H_
+#define BOARD_H_
 
 #include <stdint.h>
 
@@ -51,13 +51,29 @@ void init_clks2(void);
 void bl_init_clks(void);
 
 /**
- * @brief   Define the type for the radio packet length for the transceiver
+ * @name Define UART device and baudrate for stdio
+ * @{
  */
-typedef uint8_t radio_packet_length_t;
+#define STDIO               UART_0
+#define STDIO_BAUDRATE      (115200U)
+#define STDIO_RX_BUFSIZE    (64U)
+/** @} */
+
+/**
+ * @name dummy-defines for LEDs
+ * @{
+ */
+#define LED_GREEN_ON        /* not available */
+#define LED_GREEN_OFF       /* not available */
+#define LED_GREEN_TOGGLE    /* not available */
+#define LED_RED_ON          /* not available */
+#define LED_RED_OFF         /* not available */
+#define LED_RED_TOGGLE      /* not available */
+/** @} */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __BOARD_H */
 /** @} */
+#endif /* BOARD_H_ */

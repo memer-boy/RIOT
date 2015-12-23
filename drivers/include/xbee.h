@@ -9,7 +9,7 @@
 
 /**
  * @defgroup    drivers_xbee XBee driver
- * @ingroup     drivers
+ * @ingroup     drivers_netdev
  * @brief       High-level driver for the XBee S1 802.15.4 modem
  * @{
  *
@@ -29,11 +29,11 @@
 #include "mutex.h"
 #include "periph/uart.h"
 #include "periph/gpio.h"
-#include "net/ng_netbase.h"
-#include "net/ng_ieee802154.h"
+#include "net/gnrc.h"
+#include "net/ieee802154.h"
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
 /**
@@ -54,10 +54,10 @@
 /**
  * @brief   Default protocol for data that is coming in
  */
-#ifdef MODULE_NG_SIXLOWPAN
-#define XBEE_DEFAULT_PROTOCOL       (NG_NETTYPE_SIXLOWPAN)
+#ifdef MODULE_GNRC_SIXLOWPAN
+#define XBEE_DEFAULT_PROTOCOL       (GNRC_NETTYPE_SIXLOWPAN)
 #else
-#define XBEE_DEFAULT_PROTOCOL       (NG_NETTYPE_UNDEF)
+#define XBEE_DEFAULT_PROTOCOL       (GNRC_NETTYPE_UNDEF)
 #endif
 
 /**
@@ -68,7 +68,7 @@
 /**
  * @brief   Default channel used after initialization
  */
-#define XBEE_DEFAULT_CHANNEL        (17U)
+#define XBEE_DEFAULT_CHANNEL        (26U)
 
 /**
  * @name    Address flags
@@ -108,14 +108,14 @@ typedef enum {
  */
 typedef struct {
     /* netdev fields */
-    ng_netdev_driver_t const *driver;   /**< pointer to the devices interface */
-    ng_netdev_event_cb_t event_cb;      /**< netdev event callback */
+    gnrc_netdev_driver_t const *driver; /**< pointer to the devices interface */
+    gnrc_netdev_event_cb_t event_cb;    /**< netdev event callback */
     kernel_pid_t mac_pid;               /**< the driver's thread's PID */
     /* device driver specific fields */
     uart_t uart;                        /**< UART interfaced used */
     gpio_t reset_pin;                   /**< GPIO pin connected to RESET */
     gpio_t sleep_pin;                   /**< GPIO pin connected to SLEEP */
-    ng_nettype_t proto;                 /**< protocol the interface speaks */
+    gnrc_nettype_t proto;               /**< protocol the interface speaks */
     uint8_t options;                    /**< options field */
     uint8_t addr_flags;                 /**< address flags as defined above */
     uint8_t addr_short[2];              /**< onw 802.15.4 short address */
@@ -128,8 +128,6 @@ typedef struct {
     mutex_t tx_lock;                    /**< mutex to allow only one
                                          *   transmission at a time */
     uint8_t tx_buf[XBEE_MAX_PKT_LENGTH];/**< transmit data buffer */
-    uint16_t tx_count;                  /**< counter for ongoing transmission */
-    uint16_t tx_limit;                  /**< size of TX frame transferred */
     /* buffer and synchronization for command responses */
     mutex_t resp_lock;                  /**< mutex for waiting for AT command
                                          *   response frames */
@@ -145,7 +143,7 @@ typedef struct {
 /**
  * @brief   Reference to the XBee driver interface
  */
-extern const ng_netdev_driver_t xbee_driver;
+extern const gnrc_netdev_driver_t xbee_driver;
 
 /**
  * @brief   Initialize the given Xbee device

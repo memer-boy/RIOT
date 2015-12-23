@@ -65,8 +65,7 @@ static void clk_init(void)
     SYSCTRL->DPLLCTRLB.reg = (SYSCTRL_DPLLCTRLB_REFCLK_GCLK);
     SYSCTRL->DPLLCTRLA.reg = (SYSCTRL_DPLLCTRLA_ENABLE);
     while(!(SYSCTRL->DPLLSTATUS.reg &
-           (SYSCTRL_DPLLSTATUS_CLKRDY | SYSCTRL_DPLLSTATUS_LOCK)) ==
-           (SYSCTRL_DPLLSTATUS_CLKRDY | SYSCTRL_DPLLSTATUS_LOCK));
+           (SYSCTRL_DPLLSTATUS_CLKRDY | SYSCTRL_DPLLSTATUS_LOCK)));
 
     /* select the PLL as source for clock generator 0 (CPU core clock) */
     GCLK->GENDIV.reg =  (GCLK_GENDIV_DIV(CLOCK_PLL_DIV) |
@@ -84,6 +83,12 @@ static void clk_init(void)
 
     /* make sure we synchronize clock generator 0 before we go on */
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY);
+
+    /* redirect all peripherals to a disabled clock generator (7) by default */
+    for (int i = 0x3; i <= 0x22; i++) {
+        GCLK->CLKCTRL.reg = ( GCLK_CLKCTRL_ID(i) | GCLK_CLKCTRL_GEN_GCLK7 );
+        while (GCLK->STATUS.bit.SYNCBUSY);
+    }
 }
 
 void cpu_init(void)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freie Universität Berlin
+ * Copyright (C) 2014-2015 Freie Universität Berlin
  *
  * This file is subject to the terms and conditions of the GNU Lesser General
  * Public License v2.1. See the file LICENSE in the top level directory for more
@@ -7,20 +7,20 @@
  */
 
 /**
- * @defgroup    boards_pca10000 PCA10000 (nRF51822 Development Kit)
+ * @defgroup    boards_pca10000 Nordic PCA10000
  * @ingroup     boards
- * @brief       Board specific files for the nRF51822 board pca10000.
+ * @brief       Board specific files for the Nordic PCA100000
  * @{
  *
  * @file
- * @brief       Board specific definitions for the nRF51822 evaluation board pca10000.
+ * @brief       Board configuration for the Nordic PCA10000 board
  *
  * @author      Christian Kühling <kuehling@zedat.fu-berlin.de>
  * @author      Timo Ziegler <timo.ziegler@fu-berlin.de>
  */
 
-#ifndef __BOARD_H
-#define __BOARD_H
+#ifndef BOARD_H
+#define BOARD_H
 
 #include "cpu.h"
 
@@ -29,26 +29,32 @@ extern "C" {
 #endif
 
 /**
- * Define the nominal CPU core clock in this board
+ * @brief   Define the nominal CPU core clock in this board
  */
 #define F_CPU               (16000000UL)
 
 /**
- * @brief Assign the hardware timer
- */
-#define HW_TIMER            TIMER_0
-
-/**
- * @name Define the boards stdio
+ * @brief   Xtimer configuration
  * @{
  */
-#define STDIO               UART_0
+#define XTIMER                      (0)
+#define XTIMER_CHAN                 (0)
+#define XTIMER_MASK                 (0xff000000)
+#define XTIMER_SHIFT_ON_COMPARE     (2)
+#define XTIMER_BACKOFF              (40)
+/** @} */
+
+/**
+ * @name    Define the boards stdio
+ * @{
+ */
+#define STDIO               UART_DEV(0)
 #define STDIO_BAUDRATE      (115200U)
 #define STDIO_RX_BUFSIZE    (64U)
 /** @} */
 
 /**
- * @name LED pin definitions
+ * @name    LED pin definitions
  * @{
  */
 #define ONBOARD_LED         1
@@ -72,9 +78,8 @@ extern "C" {
 #define LED_BLUE_TOGGLE     (NRF_GPIO->OUT ^= LED_BLUE_PIN)
 /** @} */
 
-
 /**
- * @brief Initialize board specific hardware, including clock, LEDs and std-IO
+ * @brief   Initialize the board, including triggering the CPU initialization
  */
 void board_init(void);
 
@@ -82,5 +87,5 @@ void board_init(void);
 }
 #endif
 
-#endif /** __BOARD_H */
+#endif /** BOARD_H */
 /** @} */

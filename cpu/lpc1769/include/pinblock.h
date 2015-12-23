@@ -39,11 +39,11 @@ extern "C" {
 #define TRACE_BLOCK     0x05
 #define TRACE_PIN       0x01
 
-#define PIN(BLOCK,NUMBER)   ( ( (BLOCK & 0x0f) << 4 ) | (NUMBER & 0x0f) )
-#define CONNECT(PINDEF, FUNCTION, PULLS, OPENDRAIN) { .cfg = PINDEF, .function = FUNCTION, .mode = PULLS, .opendrain = OPENDRAIN }
+#define PIN(BLOCK,NUMBER)   ( ( (BLOCK & 0x0f) << 8 ) | (NUMBER & 0xff) )
+#define CONNECT(PINDEF, FUNCTION, PULLS, OPENDRAIN) { .pin = PINDEF, .function = FUNCTION, .mode = PULLS, .opendrain = OPENDRAIN }
 
 typedef struct pinblock {
-    uint8_t pin;
+    uint16_t pin;
 
     union {
 
@@ -60,7 +60,7 @@ typedef struct pinblock {
 /**
  * @brief Initialize pin connect block.
  * 
- * This function sets the pin function, pin mode and open drain options
+ * This function sets the pin functionality, pin mode and open drain options
  * of each pin defined in the array, other pins not included in the array
  * will have their default function, mode and open drain option.
  * 
@@ -76,7 +76,7 @@ typedef struct pinblock {
  * @param [in] len      CONNECTs array length, e.g. sizeof(config).
  * @return              0 if successful, any value otherwise.
  */
-uint16_t pinblock_init(pinblock_t *config, uint16_t len);
+uint16_t pinblock_connect(pinblock_t *config, uint16_t len);
 #ifdef	__cplusplus
 }
 #endif

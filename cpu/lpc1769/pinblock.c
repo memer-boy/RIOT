@@ -15,7 +15,7 @@
 #include "cpuvars.h"
 #include <errno.h>
 
-#define _BLOCK(PIN_DEF) ((*PIN_DEF).pin>>4)
+#define _BLOCK(PIN_DEF) ((*PIN_DEF).pin>>8)
 #define _PIN(PIN_DEF)   (0xff & (*PIN_DEF).pin)
 
 
@@ -23,7 +23,7 @@ void _pinblock_set_func(pinblock_t*);
 void _pinblock_set_mode(pinblock_t*);
 void _pinblock_set_mode_od(pinblock_t*);
 
-uint16_t pinblock_init(pinblock_t *config, uint16_t len) {
+uint16_t pinblock_connect(pinblock_t *config, uint16_t len) {
     for (; len > 0; len--) {
         uint8_t block = _BLOCK(config);
         uint8_t pin = _PIN(config);
@@ -86,8 +86,10 @@ void _pinblock_set_func(pinblock_t *config) {
     uint32_t func = (*config).function;
     uint32_t mask = 0b11;
 
-    func = func << (pin * 2);
-    mask = mask << (pin * 2);
+    if (pin < 16) {
+		func = func << (pin * 2);
+		mask = mask << (pin * 2);
+    }
 
     switch (block) {
     case 0:
@@ -96,7 +98,11 @@ void _pinblock_set_func(pinblock_t *config) {
             func = func << (pin * 2);
             mask = mask << (pin * 2);
             LPC_PINSEL.SEL1 &= ~mask;
-            LPC_PINSEL.SEL1 = func;
+            LPC_PINSEL.SEL1 |= func;
+        }
+        else {
+            LPC_PINSEL.SEL0 &= ~mask;
+            LPC_PINSEL.SEL0 |= func;
         }
         break;
     case 1:
@@ -105,28 +111,28 @@ void _pinblock_set_func(pinblock_t *config) {
             func = func << (pin * 2);
             mask = mask << (pin * 2);
             LPC_PINSEL.SEL3 &= ~mask;
-            LPC_PINSEL.SEL3 = func;
+            LPC_PINSEL.SEL3 |= func;
         }
         else {
             LPC_PINSEL.SEL2 &= ~mask;
-            LPC_PINSEL.SEL2 = func;
+            LPC_PINSEL.SEL2 |= func;
         }
         break;
     case 2:
         LPC_PINSEL.SEL4 &= ~mask;
-        LPC_PINSEL.SEL4 = func;
+        LPC_PINSEL.SEL4 |= func;
         break;
     case 3:
         LPC_PINSEL.SEL7 &= ~mask;
-        LPC_PINSEL.SEL7 = func;
+        LPC_PINSEL.SEL7 |= func;
         break;
     case 4:
         LPC_PINSEL.SEL9 &= ~mask;
-        LPC_PINSEL.SEL9 = func;
+        LPC_PINSEL.SEL9 |= func;
         break;
     case 5:
         LPC_PINSEL.SEL10 &= ~mask;
-        LPC_PINSEL.SEL10 = func;
+        LPC_PINSEL.SEL10 |= func;
         break;
     }
 }
@@ -137,8 +143,10 @@ void _pinblock_set_mode(pinblock_t *config) {
     uint32_t mode = (*config).mode;
     uint32_t mask = 0b11;
 
-    mode = mode << (pin * 2);
-    mask = mask << (pin * 2);
+    if (pin < 16) {
+		mode = mode << (pin * 2);
+		mask = mask << (pin * 2);
+    }
 
     switch (block) {
     case 0:
@@ -147,7 +155,11 @@ void _pinblock_set_mode(pinblock_t *config) {
             mode = mode << (pin * 2);
             mask = mask << (pin * 2);
             LPC_PINMODE.MODE1 &= ~mask;
-            LPC_PINMODE.MODE1 = mode;
+            LPC_PINMODE.MODE1 |= mode;
+        }
+        else {
+            LPC_PINMODE.MODE0 &= ~mask;
+            LPC_PINMODE.MODE0 |= mode;
         }
         break;
     case 1:
@@ -156,24 +168,24 @@ void _pinblock_set_mode(pinblock_t *config) {
             mode = mode << (pin * 2);
             mask = mask << (pin * 2);
             LPC_PINMODE.MODE3 &= ~mask;
-            LPC_PINMODE.MODE3 = mode;
+            LPC_PINMODE.MODE3 |= mode;
         }
         else {
             LPC_PINMODE.MODE2 &= ~mask;
-            LPC_PINMODE.MODE2 = mode;
+            LPC_PINMODE.MODE2 |= mode;
         }
         break;
     case 2:
         LPC_PINMODE.MODE4 &= ~mask;
-        LPC_PINMODE.MODE4 = mode;
+        LPC_PINMODE.MODE4 |= mode;
         break;
     case 3:
         LPC_PINMODE.MODE7 &= ~mask;
-        LPC_PINMODE.MODE7 = mode;
+        LPC_PINMODE.MODE7 |= mode;
         break;
     case 4:
         LPC_PINMODE.MODE9 &= ~mask;
-        LPC_PINMODE.MODE9 = mode;
+        LPC_PINMODE.MODE9 |= mode;
         break;
     }
 }
@@ -188,5 +200,5 @@ void _pinblock_set_mode_od(pinblock_t *config) {
     mask = mask << pin;
 
     LPC_PINMODEOD.OD[block] &= ~mask;
-    LPC_PINMODEOD.OD[block] = od;
+    LPC_PINMODEOD.OD[block] |= od;
 }
