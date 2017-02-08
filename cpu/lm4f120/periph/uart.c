@@ -22,8 +22,6 @@
 
 #include "assert.h"
 #include "cpu.h"
-#include "sched.h"
-#include "thread.h"
 #include "periph/uart.h"
 #include "periph_conf.h"
 
@@ -31,36 +29,6 @@
  * @brief UART device configurations
  */
 static uart_isr_ctx_t config[UART_NUMOF];
-
-/**
- * The list of UART peripherals.
- */
-static const unsigned long g_ulUARTPeriph[3] =
-{
-    SYSCTL_PERIPH_UART0,
-    SYSCTL_PERIPH_UART1,
-    SYSCTL_PERIPH_UART2
-};
-
-/**
- * The list of all possible base address of the console UART
- */
-static const unsigned long g_ulUARTBase[3] =
-{
-    UART0_BASE,
-    UART1_BASE,
-    UART2_BASE
-};
-
-/**
- * The list of possible interrupts for the console UART.
- */
-static const unsigned long g_ulUARTInt[3] =
-{
-    INT_UART0,
-    INT_UART1,
-    INT_UART2
-};
 
 static int init_base(uart_t uart, uint32_t baudrate);
 
@@ -73,11 +41,11 @@ int uart_init(uart_t uart, uint32_t baudrate, uart_rx_cb_t rx_cb, void *arg)
     assert(uart == 0);
     /* Check to make sure the UART peripheral is present */
     if(!ROM_SysCtlPeripheralPresent(SYSCTL_PERIPH_UART0)){
-        return -1;
+        return UART_NODEV;
     }
 
     int res = init_base(uart, baudrate);
-    if(res < 0){
+    if(res != UART_OK){
         return res;
     }
 
@@ -106,7 +74,7 @@ int uart_init(uart_t uart, uint32_t baudrate, uart_rx_cb_t rx_cb, void *arg)
             break;
 #endif
     }
-    return 0;
+    return UART_OK;
 }
 
 static int init_base(uart_t uart, uint32_t baudrate)
@@ -129,8 +97,10 @@ static int init_base(uart_t uart, uint32_t baudrate)
             ROM_UARTEnable(UART0_BASE);
             break;
 #endif
+        default:
+            return UART_NODEV;
         }
-    return 0;
+    return UART_OK;
 }
 
 void uart_write(uart_t uart, const uint8_t *data, size_t len)
@@ -165,14 +135,9 @@ void isr_uart0(void)
     {
         while(ROM_UARTCharsAvail(UART0_BASE))
         {
-            char cChar;
-            long lChar;
-            lChar = ROM_UARTCharGetNonBlocking(UART0_BASE);
-            cChar = (unsigned char)(lChar & 0xFF);
-            config[UART_0].rx_cb(config[UART_0].arg, cChar);
+            long lchar = ROM_UARTCharGetNonBlocking(UART0_BASE);
+            config[UART_0].rx_cb(config[UART_0].arg, (uint8_t)lchar);
         }
     }
-    if (sched_context_switch_request) {
-        thread_yield();
-    }
+    cortexm_isr_end();
 }

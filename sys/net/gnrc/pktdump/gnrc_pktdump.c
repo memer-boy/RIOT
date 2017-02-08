@@ -25,11 +25,12 @@
 #include "byteorder.h"
 #include "thread.h"
 #include "msg.h"
-#include "kernel.h"
 #include "net/gnrc/pktdump.h"
 #include "net/gnrc.h"
+#include "net/icmpv6.h"
 #include "net/ipv6/addr.h"
 #include "net/ipv6/hdr.h"
+#include "net/tcp.h"
 #include "net/udp.h"
 #include "net/sixlowpan.h"
 #include "od.h"
@@ -37,7 +38,7 @@
 /**
  * @brief   PID of the pktdump thread
  */
-static kernel_pid_t _pid = KERNEL_PID_UNDEF;
+kernel_pid_t gnrc_pktdump_pid = KERNEL_PID_UNDEF;
 
 /**
  * @brief   Stack for the pktdump thread
@@ -72,11 +73,13 @@ static void _dump_snip(gnrc_pktsnip_t *pkt)
 #ifdef MODULE_GNRC_ICMPV6
         case GNRC_NETTYPE_ICMPV6:
             printf("NETTYPE_ICMPV6 (%i)\n", pkt->type);
+            icmpv6_hdr_print(pkt->data);
             break;
 #endif
 #ifdef MODULE_GNRC_TCP
         case GNRC_NETTYPE_TCP:
             printf("NETTYPE_TCP (%i)\n", pkt->type);
+            tcp_hdr_print(pkt->data);
             break;
 #endif
 #ifdef MODULE_GNRC_UDP
@@ -135,11 +138,11 @@ static void *_eventloop(void *arg)
         switch (msg.type) {
             case GNRC_NETAPI_MSG_TYPE_RCV:
                 puts("PKTDUMP: data received:");
-                _dump((gnrc_pktsnip_t *)msg.content.ptr);
+                _dump(msg.content.ptr);
                 break;
             case GNRC_NETAPI_MSG_TYPE_SND:
                 puts("PKTDUMP: data to send:");
-                _dump((gnrc_pktsnip_t *)msg.content.ptr);
+                _dump(msg.content.ptr);
                 break;
             case GNRC_NETAPI_MSG_TYPE_GET:
             case GNRC_NETAPI_MSG_TYPE_SET:
@@ -155,17 +158,12 @@ static void *_eventloop(void *arg)
     return NULL;
 }
 
-kernel_pid_t gnrc_pktdump_getpid(void)
-{
-    return _pid;
-}
-
 kernel_pid_t gnrc_pktdump_init(void)
 {
-    if (_pid == KERNEL_PID_UNDEF) {
-        _pid = thread_create(_stack, sizeof(_stack), GNRC_PKTDUMP_PRIO,
+    if (gnrc_pktdump_pid == KERNEL_PID_UNDEF) {
+        gnrc_pktdump_pid = thread_create(_stack, sizeof(_stack), GNRC_PKTDUMP_PRIO,
                              THREAD_CREATE_STACKTEST,
                              _eventloop, NULL, "pktdump");
     }
-    return _pid;
+    return gnrc_pktdump_pid;
 }

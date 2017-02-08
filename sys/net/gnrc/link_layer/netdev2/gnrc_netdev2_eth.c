@@ -20,6 +20,10 @@
 #include "net/gnrc/netdev2.h"
 #include "net/ethernet/hdr.h"
 
+#ifdef MODULE_GNRC_IPV6
+#include "net/ipv6/hdr.h"
+#endif
+
 #include "od.h"
 
 #define ENABLE_DEBUG (0)
@@ -28,20 +32,24 @@
 static gnrc_pktsnip_t *_recv(gnrc_netdev2_t *gnrc_netdev2)
 {
     netdev2_t *dev = gnrc_netdev2->dev;
-    int bytes_expected = dev->driver->recv(dev, NULL, 0);
+    int bytes_expected = dev->driver->recv(dev, NULL, 0, NULL);
     gnrc_pktsnip_t *pkt = NULL;
 
-    if (bytes_expected) {
+    if (bytes_expected > 0) {
         pkt = gnrc_pktbuf_add(NULL, NULL,
                 bytes_expected,
                 GNRC_NETTYPE_UNDEF);
 
         if(!pkt) {
             DEBUG("_recv_ethernet_packet: cannot allocate pktsnip.\n");
+
+            /* drop the packet */
+            dev->driver->recv(dev, NULL, bytes_expected, NULL);
+
             goto out;
         }
 
-        int nread = dev->driver->recv(dev, pkt->data, bytes_expected);
+        int nread = dev->driver->recv(dev, pkt->data, bytes_expected, NULL);
         if(nread <= 0) {
             DEBUG("_recv_ethernet_packet: read error.\n");
             goto safe_out;
@@ -109,17 +117,16 @@ static inline void _addr_set_broadcast(uint8_t *dst)
     memset(dst, 0xff, ETHERNET_ADDR_LEN);
 }
 
-#define _IPV6_DST_OFFSET    (36)    /* sizeof(ipv6_hdr_t) - 4  */
-
 static inline void _addr_set_multicast(uint8_t *dst, gnrc_pktsnip_t *payload)
 {
     switch (payload->type) {
-#ifdef MODULE_IPV6
+#ifdef MODULE_GNRC_IPV6
         case GNRC_NETTYPE_IPV6:
+            /* https://tools.ietf.org/html/rfc2464#section-7 */
             dst[0] = 0x33;
             dst[1] = 0x33;
-            memcpy(dst + 2, ((uint8_t *)payload->data) + _IPV6_DST_OFFSET, 4);
-            /* TODO change to proper types when gnrc_ipv6_hdr_t got merged */
+            ipv6_hdr_t *ipv6 = payload->data;
+            memcpy(dst + 2, ipv6->dst.u8 + 12, 4);
             break;
 #endif
         default:
@@ -133,11 +140,12 @@ static int _send(gnrc_netdev2_t *gnrc_netdev2, gnrc_pktsnip_t *pkt)
     ethernet_hdr_t hdr;
     gnrc_netif_hdr_t *netif_hdr;
     gnrc_pktsnip_t *payload;
+    int res;
 
     netdev2_t *dev = gnrc_netdev2->dev;
 
     if (pkt == NULL) {
-        DEBUG("gnrc_netdev2_eth: pkt was NULL");
+        DEBUG("gnrc_netdev2_eth: pkt was NULL\n");
         return -EINVAL;
     }
 
@@ -191,15 +199,29 @@ static int _send(gnrc_netdev2_t *gnrc_netdev2, gnrc_pktsnip_t *pkt)
           hdr.dst[3], hdr.dst[4], hdr.dst[5]);
 
     size_t n;
-    pkt = gnrc_pktbuf_get_iovec(pkt, &n);
-    struct iovec *vector = (struct iovec *)pkt->data;
-    vector[0].iov_base = (char*)&hdr;
-    vector[0].iov_len = sizeof(ethernet_hdr_t);
-    dev->driver->send(dev, vector, n);
+    payload = gnrc_pktbuf_get_iovec(pkt, &n);   /* use payload as temporary
+                                                 * variable */
+    res = -ENOBUFS;
+    if (payload != NULL) {
+        pkt = payload;      /* reassign for later release; vec_snip is prepended to pkt */
+        struct iovec *vector = (struct iovec *)pkt->data;
+        vector[0].iov_base = (char*)&hdr;
+        vector[0].iov_len = sizeof(ethernet_hdr_t);
+#ifdef MODULE_NETSTATS_L2
+        if ((netif_hdr->flags & GNRC_NETIF_HDR_FLAGS_BROADCAST) ||
+            (netif_hdr->flags & GNRC_NETIF_HDR_FLAGS_MULTICAST)) {
+            gnrc_netdev2->dev->stats.tx_mcast_count++;
+        }
+        else {
+            gnrc_netdev2->dev->stats.tx_unicast_count++;
+        }
+#endif
+        res = dev->driver->send(dev, vector, n);
+    }
 
     gnrc_pktbuf_release(pkt);
 
-    return 0;
+    return res;
 }
 
 int gnrc_netdev2_eth_init(gnrc_netdev2_t *gnrc_netdev2, netdev2_t *dev)

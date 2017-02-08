@@ -37,8 +37,54 @@ static char addr_str[IPV6_ADDR_MAX_STR_LEN];
 
 static gnrc_ipv6_nc_t ncache[GNRC_IPV6_NC_SIZE];
 
+static void _nc_remove(kernel_pid_t iface, gnrc_ipv6_nc_t *entry)
+{
+    (void) iface;
+    if (entry == NULL) {
+        return;
+    }
+
+    DEBUG("ipv6_nc: Remove %s for interface %" PRIkernel_pid "\n",
+          ipv6_addr_to_str(addr_str, &(entry->ipv6_addr), sizeof(addr_str)),
+          iface);
+
+#ifdef MODULE_GNRC_NDP_NODE
+    while (entry->pkts != NULL) {
+        gnrc_pktbuf_release(entry->pkts->pkt);
+        entry->pkts->pkt = NULL;
+        gnrc_pktqueue_remove_head(&entry->pkts);
+    }
+#endif
+#ifdef MODULE_GNRC_SIXLOWPAN_ND_ROUTER
+    xtimer_remove(&entry->type_timeout);
+
+    gnrc_ipv6_netif_t *if_entry = gnrc_ipv6_netif_get(iface);
+
+    if ((if_entry != NULL) && (if_entry->rtr_adv_msg.content.ptr == entry)) {
+        /* cancel timer set by gnrc_ndp_rtr_sol_handle */
+        xtimer_remove(&if_entry->rtr_adv_timer);
+    }
+#endif
+#if defined(MODULE_GNRC_NDP_ROUTER) || defined(MODULE_GNRC_SIXLOWPAN_ND_BORDER_ROUTER)
+    xtimer_remove(&entry->rtr_adv_timer);
+#endif
+
+    xtimer_remove(&entry->rtr_timeout);
+    xtimer_remove(&entry->nbr_sol_timer);
+    xtimer_remove(&entry->nbr_adv_timer);
+
+    ipv6_addr_set_unspecified(&(entry->ipv6_addr));
+    entry->iface = KERNEL_PID_UNDEF;
+    entry->flags = 0;
+}
+
 void gnrc_ipv6_nc_init(void)
 {
+    gnrc_ipv6_nc_t *entry;
+
+    for (entry = ncache; entry < (ncache + GNRC_IPV6_NC_SIZE); entry++) {
+        _nc_remove(entry->iface, entry);
+    }
     memset(ncache, 0, sizeof(ncache));
 }
 
@@ -129,18 +175,18 @@ gnrc_ipv6_nc_t *gnrc_ipv6_nc_add(kernel_pid_t iface, const ipv6_addr_t *ipv6_add
 
 #ifdef MODULE_GNRC_SIXLOWPAN_ND_ROUTER
     free_entry->type_timeout_msg.type = GNRC_SIXLOWPAN_ND_MSG_AR_TIMEOUT;
-    free_entry->type_timeout_msg.content.ptr = (char *) free_entry;
+    free_entry->type_timeout_msg.content.ptr = free_entry;
 #endif
 
     free_entry->rtr_timeout_msg.type = GNRC_NDP_MSG_RTR_TIMEOUT;
-    free_entry->rtr_timeout_msg.content.ptr = (char *) free_entry;
+    free_entry->rtr_timeout_msg.content.ptr = free_entry;
 
 #if defined(MODULE_GNRC_NDP_ROUTER) || defined(MODULE_GNRC_SIXLOWPAN_ND_BORDER_ROUTER)
     free_entry->rtr_adv_msg.type = GNRC_NDP_MSG_RTR_ADV_DELAY;
-    free_entry->rtr_adv_msg.content.ptr = (char *) free_entry;
+    free_entry->rtr_adv_msg.content.ptr = free_entry;
 #endif
 
-    free_entry->nbr_sol_msg.content.ptr = (char *) free_entry;
+    free_entry->nbr_sol_msg.content.ptr = free_entry;
 
     return free_entry;
 }
@@ -148,30 +194,7 @@ gnrc_ipv6_nc_t *gnrc_ipv6_nc_add(kernel_pid_t iface, const ipv6_addr_t *ipv6_add
 void gnrc_ipv6_nc_remove(kernel_pid_t iface, const ipv6_addr_t *ipv6_addr)
 {
     gnrc_ipv6_nc_t *entry = gnrc_ipv6_nc_get(iface, ipv6_addr);
-
-    if (entry != NULL) {
-        DEBUG("ipv6_nc: Remove %s for interface %" PRIkernel_pid "\n",
-              ipv6_addr_to_str(addr_str, ipv6_addr, sizeof(addr_str)),
-              iface);
-
-#ifdef MODULE_GNRC_NDP_NODE
-        while (entry->pkts != NULL) {
-            gnrc_pktbuf_release(entry->pkts->pkt);
-            entry->pkts->pkt = NULL;
-            gnrc_pktqueue_remove_head(&entry->pkts);
-        }
-#endif
-#ifdef MODULE_GNRC_SIXLOWPAN_ND_ROUTER
-        xtimer_remove(&entry->type_timeout);
-#endif
-#if defined(MODULE_GNRC_NDP_ROUTER) || defined(MODULE_GNRC_SIXLOWPAN_ND_BORDER_ROUTER)
-        xtimer_remove(&entry->rtr_adv_timer);
-#endif
-
-        ipv6_addr_set_unspecified(&(entry->ipv6_addr));
-        entry->iface = KERNEL_PID_UNDEF;
-        entry->flags = 0;
-    }
+    _nc_remove(iface, entry);
 }
 
 gnrc_ipv6_nc_t *gnrc_ipv6_nc_get(kernel_pid_t iface, const ipv6_addr_t *ipv6_addr)
@@ -183,7 +206,8 @@ gnrc_ipv6_nc_t *gnrc_ipv6_nc_get(kernel_pid_t iface, const ipv6_addr_t *ipv6_add
 
     for (int i = 0; i < GNRC_IPV6_NC_SIZE; i++) {
         if (((ncache[i].iface == KERNEL_PID_UNDEF) || (iface == KERNEL_PID_UNDEF) ||
-             (iface == ncache[i].iface)) && ipv6_addr_equal(&(ncache[i].ipv6_addr), ipv6_addr)) {
+             (iface == ncache[i].iface)) &&
+            ipv6_addr_equal(&(ncache[i].ipv6_addr), ipv6_addr)) {
             DEBUG("ipv6_nc: Found entry for %s on interface %" PRIkernel_pid
                   " (0 = all interfaces) [%p]\n",
                   ipv6_addr_to_str(addr_str, ipv6_addr, sizeof(addr_str)),
@@ -240,7 +264,7 @@ gnrc_ipv6_nc_t *gnrc_ipv6_nc_still_reachable(const ipv6_addr_t *ipv6_addr)
 
     if ((gnrc_ipv6_nc_get_state(entry) != GNRC_IPV6_NC_STATE_INCOMPLETE) &&
         (gnrc_ipv6_nc_get_state(entry) != GNRC_IPV6_NC_STATE_UNMANAGED)) {
-#if defined(MODULE_GNRC_IPV6_NETIF) && defined(MODULE_VTIMER) && defined(MODULE_GNRC_IPV6)
+#if defined(MODULE_GNRC_IPV6_NETIF) && defined(MODULE_XTIMER) && defined(MODULE_GNRC_IPV6)
         gnrc_ipv6_netif_t *iface = gnrc_ipv6_netif_get(entry->iface);
 
         gnrc_ndp_internal_reset_nbr_sol_timer(entry, iface->reach_time,
@@ -254,6 +278,18 @@ gnrc_ipv6_nc_t *gnrc_ipv6_nc_still_reachable(const ipv6_addr_t *ipv6_addr)
     }
 
     return entry;
+}
+
+kernel_pid_t gnrc_ipv6_nc_get_l2_addr(uint8_t *l2_addr, uint8_t *l2_addr_len,
+                                      const gnrc_ipv6_nc_t *entry)
+{
+    assert((l2_addr != NULL) && (l2_addr_len != NULL));
+    if ((entry == NULL) || !gnrc_ipv6_nc_is_reachable(entry)) {
+        return KERNEL_PID_UNDEF;
+    }
+    *l2_addr_len = entry->l2_addr_len;
+    memcpy(l2_addr, entry->l2_addr, entry->l2_addr_len);
+    return entry->iface;
 }
 
 /** @} */

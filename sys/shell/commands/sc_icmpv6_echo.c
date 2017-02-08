@@ -38,9 +38,10 @@ static char ipv6_str[IPV6_ADDR_MAX_STR_LEN];
 
 static void usage(char **argv)
 {
-    printf("%s [<count>] <ipv6 addr> [<payload_len>] [<delay in ms>] [<stats interval>]\n", argv[0]);
+    printf("%s [<count>] <ipv6 addr>[%%<interface>] [<payload_len>] [<delay in ms>] [<stats interval>]\n", argv[0]);
     puts("defaults:");
     puts("    count = 3");
+    puts("    interface = first interface if only one present, only needed for link-local addresses");
     puts("    payload_len = 4");
     puts("    delay = 1000");
     puts("    stats interval = count");
@@ -85,8 +86,8 @@ int _handle_reply(gnrc_pktsnip_t *pkt, uint32_t time)
     icmpv6_echo_t *icmpv6_hdr;
     uint16_t seq;
 
-    LL_SEARCH_SCALAR(pkt, ipv6, type, GNRC_NETTYPE_IPV6);
-    LL_SEARCH_SCALAR(pkt, icmpv6, type, GNRC_NETTYPE_ICMPV6);
+    ipv6 = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_IPV6);
+    icmpv6 = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_ICMPV6);
 
     if ((ipv6 == NULL) || (icmpv6 == NULL)) {
         puts("error: IPv6 header or ICMPv6 header not found in reply");
@@ -102,12 +103,14 @@ int _handle_reply(gnrc_pktsnip_t *pkt, uint32_t time)
             min_seq_expected++;
         }
 
-        printf("%u bytes from %s: id=%" PRIu16 " seq=%" PRIu16 " hop limit=%" PRIu8
-               " time = %" PRIu32 ".%03" PRIu32 " ms\n", (unsigned) icmpv6->size,
+        printf("%u bytes from %s: id=%" PRIu16 " seq=%" PRIu16 " hop limit=%u time = %"
+               PRIu32 ".%03" PRIu32 " ms\n", (unsigned) icmpv6->size,
                ipv6_addr_to_str(ipv6_str, &(ipv6_hdr->src), sizeof(ipv6_str)),
-               byteorder_ntohs(icmpv6_hdr->id), seq, ipv6_hdr->hl,
-               time / MS_IN_USEC, time % MS_IN_USEC);
+               byteorder_ntohs(icmpv6_hdr->id), seq, (unsigned)ipv6_hdr->hl,
+               time / US_PER_MS, time % US_PER_MS);
+#ifdef MODULE_GNRC_IPV6_NC
         gnrc_ipv6_nc_still_reachable(&ipv6_hdr->src);
+#endif
     }
     else {
         puts("error: unexpected parameters");
@@ -123,18 +126,18 @@ static void _print_stats(char *addr_str, int success, int count, uint64_t total_
     printf("--- %s ping statistics ---\n", addr_str);
 
     if (success > 0) {
-        uint32_t avg_rtt = (uint32_t)sum_rtt / count;  /* get average */
+        uint32_t avg_rtt = (uint32_t)(sum_rtt / count); /* get average */
         printf("%d packets transmitted, %d received, %d%% packet loss, time %"
                PRIu32 ".06%" PRIu32 " s\n", count, success,
                (100 - ((success * 100) / count)),
-               (uint32_t)total_time / SEC_IN_USEC, (uint32_t)total_time % SEC_IN_USEC);
+               (uint32_t)total_time / US_PER_SEC, (uint32_t)total_time % US_PER_SEC);
         printf("rtt min/avg/max = "
                "%" PRIu32 ".%03" PRIu32 "/"
                "%" PRIu32 ".%03" PRIu32 "/"
                "%" PRIu32 ".%03" PRIu32 " ms\n",
-               min_rtt / MS_IN_USEC, min_rtt % MS_IN_USEC,
-               avg_rtt / MS_IN_USEC, avg_rtt % MS_IN_USEC,
-               max_rtt / MS_IN_USEC, max_rtt % MS_IN_USEC);
+               min_rtt / US_PER_MS, min_rtt % US_PER_MS,
+               avg_rtt / US_PER_MS, avg_rtt % US_PER_MS,
+               max_rtt / US_PER_MS, max_rtt % US_PER_MS);
     }
     else {
         printf("%d packets transmitted, 0 received, 100%% packet loss\n", count);
@@ -145,12 +148,13 @@ int _icmpv6_ping(int argc, char **argv)
 {
     int count = 3, success = 0, remaining, stat_interval = 0, stat_counter = 0;
     size_t payload_len = 4;
-    uint32_t delay = 1 * SEC_IN_MS;
+    uint32_t delay = 1 * MS_PER_SEC;
     char *addr_str;
     ipv6_addr_t addr;
+    kernel_pid_t src_iface;
     msg_t msg;
-    gnrc_netreg_entry_t *ipv6_entry, my_entry = { NULL, ICMPV6_ECHO_REP,
-                                                  thread_getpid() };
+    gnrc_netreg_entry_t my_entry = GNRC_NETREG_ENTRY_INIT_PID(ICMPV6_ECHO_REP,
+                                                              sched_active_pid);
     uint32_t min_rtt = UINT32_MAX, max_rtt = 0;
     uint64_t sum_rtt = 0;
     uint64_t ping_start;
@@ -170,7 +174,6 @@ int _icmpv6_ping(int argc, char **argv)
     stat_interval = count;
 
     addr_str = argv[1 + param_offset];
-
     if (argc > (2 + param_offset)) {
         payload_len = atoi(argv[2 + param_offset]);
     }
@@ -186,9 +189,41 @@ int _icmpv6_ping(int argc, char **argv)
         return 1;
     }
 
+    src_iface = ipv6_addr_split_iface(addr_str);
+    if (src_iface == -1) {
+        src_iface = KERNEL_PID_UNDEF;
+    }
+
     if (ipv6_addr_from_str(&addr, addr_str) == NULL) {
         puts("error: malformed address");
         return 1;
+    }
+
+    if (ipv6_addr_is_link_local(&addr) || (src_iface != KERNEL_PID_UNDEF)) {
+        kernel_pid_t ifs[GNRC_NETIF_NUMOF];
+        size_t ifnum = gnrc_netif_get(ifs);
+        if (src_iface == KERNEL_PID_UNDEF) {
+            if (ifnum == 1) {
+                src_iface = ifs[0];
+            }
+            else {
+                puts("error: link local target needs interface parameter (use \"<address>%<ifnum>\")\n");
+                return 1;
+            }
+        }
+        else {
+            int valid = 0;
+            for (size_t i = 0; i < ifnum && i < GNRC_NETIF_NUMOF; i++) {
+                if (ifs[i] == src_iface) {
+                    valid = 1;
+                    break;
+                }
+            }
+            if (!valid) {
+                printf("error: %"PRIkernel_pid" is not a valid interface.\n", src_iface);
+                return 1;
+            }
+        }
     }
 
     if (gnrc_netreg_register(GNRC_NETTYPE_ICMPV6, &my_entry) < 0) {
@@ -196,20 +231,13 @@ int _icmpv6_ping(int argc, char **argv)
         return 1;
     }
 
-    ipv6_entry = gnrc_netreg_lookup(GNRC_NETTYPE_IPV6, GNRC_NETREG_DEMUX_CTX_ALL);
-
-    if (ipv6_entry == NULL) {
-        puts("error: ipv6 thread missing");
-        return 1;
-    }
-
     remaining = count;
 
-    ping_start = xtimer_now64();
+    ping_start = xtimer_now_usec64();
 
     while ((remaining--) > 0) {
         gnrc_pktsnip_t *pkt;
-        uint32_t start, stop, timeout = 1 * SEC_IN_USEC;
+        uint32_t start, timeout = 1 * US_PER_SEC;
 
         pkt = gnrc_icmpv6_echo_build(ICMPV6_ECHO_REQ, id, ++max_seq_expected,
                                      NULL, payload_len);
@@ -221,16 +249,28 @@ int _icmpv6_ping(int argc, char **argv)
 
         _set_payload(pkt->data, payload_len);
 
-        pkt = gnrc_netreg_hdr_build(GNRC_NETTYPE_IPV6, pkt, NULL, 0, addr.u8,
-                                    sizeof(ipv6_addr_t));
+        pkt = gnrc_ipv6_hdr_build(pkt, NULL, &addr);
 
         if (pkt == NULL) {
             puts("error: packet buffer full");
             continue;
         }
 
-        start = xtimer_now();
-        if (gnrc_netapi_send(ipv6_entry->pid, pkt) < 1) {
+        if (src_iface != KERNEL_PID_UNDEF) {
+            pkt = gnrc_pktbuf_add(pkt, NULL, sizeof(gnrc_netif_hdr_t),
+                                  GNRC_NETTYPE_NETIF);
+
+            if (pkt == NULL) {
+                puts("error: packet buffer full");
+                continue;
+            }
+
+            gnrc_netif_hdr_init(((gnrc_netif_hdr_t *)pkt->data), 0, 0);
+            ((gnrc_netif_hdr_t *)pkt->data)->if_pid = src_iface;
+        }
+
+        start = xtimer_now_usec();
+        if (!gnrc_netapi_dispatch_send(GNRC_NETTYPE_IPV6, GNRC_NETREG_DEMUX_CTX_ALL, pkt)) {
             puts("error: unable to send ICMPv6 echo request\n");
             gnrc_pktbuf_release(pkt);
             continue;
@@ -238,11 +278,12 @@ int _icmpv6_ping(int argc, char **argv)
 
         /* TODO: replace when #4219 was fixed */
         if (xtimer_msg_receive_timeout64(&msg, (uint64_t)timeout) >= 0) {
+            uint32_t stop;
             switch (msg.type) {
                 case GNRC_NETAPI_MSG_TYPE_RCV:
-                    stop = xtimer_now() - start;
+                    stop = xtimer_now_usec() - start;
 
-                    gnrc_pktsnip_t *pkt = (gnrc_pktsnip_t *)msg.content.ptr;
+                    gnrc_pktsnip_t *pkt = msg.content.ptr;
                     success += _handle_reply(pkt, stop);
                     gnrc_pktbuf_release(pkt);
 
@@ -271,16 +312,16 @@ int _icmpv6_ping(int argc, char **argv)
         while (msg_try_receive(&msg) > 0) {
             if (msg.type == GNRC_NETAPI_MSG_TYPE_RCV) {
                 printf("dropping additional response packet (probably caused by duplicates)\n");
-                gnrc_pktsnip_t *pkt = (gnrc_pktsnip_t *)msg.content.ptr;
+                gnrc_pktsnip_t *pkt = msg.content.ptr;
                 gnrc_pktbuf_release(pkt);
             }
         }
 
         if (remaining > 0) {
-            xtimer_usleep64(delay * MS_IN_USEC);
+            xtimer_usleep64(delay * US_PER_MS);
         }
         if ((++stat_counter == stat_interval) || (remaining == 0)) {
-            uint64_t total_time = xtimer_now64() - ping_start;
+            uint64_t total_time = xtimer_now_usec64() - ping_start;
             _print_stats(addr_str, success, (count - remaining), total_time, sum_rtt, min_rtt,
                          max_rtt);
             stat_counter = 0;
@@ -295,7 +336,7 @@ int _icmpv6_ping(int argc, char **argv)
     while (msg_try_receive(&msg) > 0) {
         if (msg.type == GNRC_NETAPI_MSG_TYPE_RCV) {
             printf("dropping additional response packet (probably caused by duplicates)\n");
-            gnrc_pktsnip_t *pkt = (gnrc_pktsnip_t *)msg.content.ptr;
+            gnrc_pktsnip_t *pkt = msg.content.ptr;
             gnrc_pktbuf_release(pkt);
         }
     }

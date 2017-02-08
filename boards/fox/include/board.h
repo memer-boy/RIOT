@@ -21,8 +21,8 @@
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
  */
 
-#ifndef BOARD_H_
-#define BOARD_H_
+#ifndef BOARD_H
+#define BOARD_H
 
 #include <stdint.h>
 
@@ -34,26 +34,17 @@ extern "C" {
 #endif
 
 /**
- * Define the nominal CPU core clock in this board
+ * @name Tell the xtimer that we use a 16-bit peripheral timer
  */
-#define F_CPU               CLOCK_CORECLOCK
-
-/**
- * @name Define the UART to be used as stdio and its baudrate
- * @{
- */
-#define STDIO               UART_0
-#define STDIO_BAUDRATE      (115200)
-#define STDIO_RX_BUFSIZE    (64U)
-/** @} */
+#define XTIMER_WIDTH        (16)
 
 /**
  * @name Define the interface to the AT86RF231 radio
  *
  * {spi bus, spi speed, cs pin, int pin, reset pin, sleep pin}
  */
-#define AT86RF2XX_PARAMS_BOARD      {.spi = SPI_0, \
-                                     .spi_speed = SPI_SPEED_5MHZ, \
+#define AT86RF2XX_PARAMS_BOARD      {.spi = SPI_DEV(0), \
+                                     .spi_clk = SPI_CLK_5MHZ, \
                                      .cs_pin = GPIO_PIN(PORT_A, 1), \
                                      .int_pin = GPIO_PIN(PORT_C, 2), \
                                      .sleep_pin = GPIO_PIN(PORT_A, 0), \
@@ -90,32 +81,22 @@ extern "C" {
 /** @} */
 
 /**
- * @name LED pin definitions
+ * @brief   LED pin definitions and handlers
  * @{
  */
-#define LED_RED_PORT        (GPIOB)
-#define LED_RED_PIN         (10)
-#define LED_RED_GPIO        GPIO_PIN(PORT_B,10)
-#define LED_GREEN_PORT      (GPIOB)
-#define LED_GREEN_PIN       (12)
-#define LED_GREEN_GPIO      GPIO_PIN(PORT_B,12)
-/** @} */
+#define LED0_PIN            GPIO_PIN(PORT_B, 10)
+#define LED1_PIN            GPIO_PIN(PORT_B, 12)
 
-/**
- * @name Macros for controlling the on-board LEDs.
- * @{
- */
-#define LED_RED_ON          (LED_RED_PORT->ODR &= ~(1<<LED_RED_PIN))
-#define LED_RED_OFF         (LED_RED_PORT->ODR |= (1<<LED_RED_PIN))
-#define LED_RED_TOGGLE      (LED_RED_PORT->ODR ^= (1<<LED_RED_PIN))
+#define LED0_MASK           (1 << 10)
+#define LED1_MASK           (1 << 12)
 
-#define LED_GREEN_ON        (LED_GREEN_PORT->ODR &= ~(1<<LED_GREEN_PIN))
-#define LED_GREEN_OFF       (LED_GREEN_PORT->ODR |= (1<<LED_GREEN_PIN))
-#define LED_GREEN_TOGGLE    (LED_GREEN_PORT->ODR ^= (1<<LED_GREEN_PIN))
+#define LED0_ON             (GPIOB->ODR &= ~LED0_MASK)
+#define LED0_OFF            (GPIOB->ODR |=  LED0_MASK)
+#define LED0_TOGGLE         (GPIOB->ODR ^=  LED0_MASK)
 
-#define LED_ORANGE_ON
-#define LED_ORANGE_OFF
-#define LED_ORANGE_TOGGLE
+#define LED1_ON             (GPIOB->ODR &= ~LED1_MASK)
+#define LED1_OFF            (GPIOB->ODR |=  LED1_MASK)
+#define LED1_TOGGLE         (GPIOB->ODR ^=  LED1_MASK)
 /** @} */
 
 /**
@@ -127,5 +108,5 @@ void board_init(void);
 }
 #endif
 
-#endif /* BOARD_H_ */
+#endif /* BOARD_H */
 /** @} */

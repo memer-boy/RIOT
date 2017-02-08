@@ -18,8 +18,8 @@
  * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se>
  */
 
-#ifndef ATOMIC_H_
-#define ATOMIC_H_
+#ifndef ATOMIC_H
+#define ATOMIC_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,8 +27,11 @@ extern "C" {
 
 /**
  * @brief Integer variable for use in atomic counters.
+ *
+ * @note    This type is a struct for hard type checking (let the compiler warn
+ *          if int is assigned regularly).
  */
-typedef struct atomic_int {
+typedef struct {
     volatile int value;         /**< the actual value */
 } atomic_int_t;
 
@@ -146,5 +149,5 @@ static inline int atomic_set_to_zero(atomic_int_t *var)
 }
 #endif
 
-#endif /* ATOMIC_H_ */
+#endif /* ATOMIC_H */
 /** @} */

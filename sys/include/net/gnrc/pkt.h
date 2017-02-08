@@ -19,12 +19,13 @@
  * @author  Martine Lenders <mlenders@inf.fu-berlin.de>
  * @author  Hauke Petersen <hauke.petersen@fu-berlin.de>
  */
-#ifndef GNRC_PKT_H_
-#define GNRC_PKT_H_
+#ifndef GNRC_PKT_H
+#define GNRC_PKT_H
 
 #include <inttypes.h>
 #include <stdlib.h>
 
+#include "kernel_types.h"
 #include "net/gnrc/nettype.h"
 
 #ifdef __cplusplus
@@ -110,6 +111,10 @@ typedef struct gnrc_pktsnip {
     void *data;                     /**< pointer to the data of the snip */
     size_t size;                    /**< the length of the snip in byte */
     gnrc_nettype_t type;            /**< protocol of the packet snip */
+#ifdef MODULE_GNRC_NETERR
+    kernel_pid_t err_sub;           /**< subscriber to errors related to this
+                                     *   packet snip */
+#endif
 } gnrc_pktsnip_t;
 
 /**
@@ -125,6 +130,31 @@ static inline size_t gnrc_pkt_len(gnrc_pktsnip_t *pkt)
 
     while (pkt) {
         len += pkt->size;
+        pkt = pkt->next;
+    }
+
+    return len;
+}
+
+/**
+ * @brief Calculates length of a packet in byte upto (including) a snip with the given type.
+ *
+ * @param[in] pkt  list of packet snips.
+ * @param[in] type type of snip to stop calculation.
+ *
+ * @return  length of the list of headers.
+ */
+static inline size_t gnrc_pkt_len_upto(gnrc_pktsnip_t *pkt, gnrc_nettype_t type)
+{
+    size_t len = 0;
+
+    while (pkt) {
+        len += pkt->size;
+
+        if (pkt->type == type) {
+            break;
+        }
+
         pkt = pkt->next;
     }
 
@@ -150,9 +180,21 @@ static inline size_t gnrc_pkt_count(const gnrc_pktsnip_t *pkt)
     return count;
 }
 
+/**
+ * @brief   Searches the packet for a packet snip of a specific type
+ *
+ * @param[in] pkt   list of packet snips
+ * @param[in] type  the type to search for
+ *
+ * @return  the packet snip in @p pkt with @ref gnrc_nettype_t @p type
+ * @return  NULL, if none of the snips in @p pkt is of @p type
+ */
+gnrc_pktsnip_t *gnrc_pktsnip_search_type(gnrc_pktsnip_t *pkt,
+                                         gnrc_nettype_t type);
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* GNRC_PKT_H_ */
+#endif /* GNRC_PKT_H */
 /** @} */

@@ -30,14 +30,14 @@ static inline void _rtr_sol_reschedule(gnrc_ipv6_netif_t *iface, uint32_t sec_de
 {
     xtimer_remove(&iface->rtr_sol_timer);
     iface->rtr_sol_msg.type = GNRC_SIXLOWPAN_ND_MSG_MC_RTR_SOL;
-    iface->rtr_sol_msg.content.ptr = (char *) iface;
-    xtimer_set_msg(&iface->rtr_sol_timer, sec_delay * SEC_IN_USEC, &iface->rtr_sol_msg,
+    iface->rtr_sol_msg.content.ptr = iface;
+    xtimer_set_msg(&iface->rtr_sol_timer, sec_delay * US_PER_SEC, &iface->rtr_sol_msg,
                    gnrc_ipv6_pid);
 }
 
 static inline uint32_t _binary_exp_backoff(uint32_t base_sec, unsigned int exp)
 {
-    return genrand_uint32_range(0, (1 << exp)) * base_sec;
+    return random_uint32_range(0, (1 << exp)) * base_sec;
 }
 
 static inline void _revert_iid(uint8_t *iid)
@@ -124,22 +124,15 @@ kernel_pid_t gnrc_sixlowpan_nd_next_hop_l2addr(uint8_t *l2addr, uint8_t *l2addr_
     ipv6_addr_t *next_hop = NULL;
     gnrc_ipv6_nc_t *nc_entry = NULL;
 
-#ifdef MODULE_GNRC_IPV6_EXT_RH
-    ipv6_hdr_t *hdr;
-    gnrc_pktsnip_t *ipv6;
-    LL_SEARCH_SCALAR(pkt, ipv6, type, GNRC_NETTYPE_IPV6);
-    assert(ipv6);
-    hdr = ipv6->data;
-    next_hop = ipv6_ext_rh_next_hop(hdr);
-#endif
 #ifdef MODULE_FIB
+    kernel_pid_t fib_iface;
     ipv6_addr_t next_hop_actual;    /* FIB copies address into this variable */
     /* don't look-up link local addresses in FIB */
     if ((next_hop == NULL) && !ipv6_addr_is_link_local(dst)) {
         size_t next_hop_size = sizeof(ipv6_addr_t);
         uint32_t next_hop_flags = 0;
         if ((next_hop == NULL) &&
-            (fib_get_next_hop(&gnrc_ipv6_fib_table, &iface, next_hop_actual.u8, &next_hop_size,
+            (fib_get_next_hop(&gnrc_ipv6_fib_table, &fib_iface, next_hop_actual.u8, &next_hop_size,
                               &next_hop_flags, (uint8_t *)dst,
                               sizeof(ipv6_addr_t), 0) >= 0) &&
             (next_hop_size == sizeof(ipv6_addr_t))) {
@@ -150,14 +143,20 @@ kernel_pid_t gnrc_sixlowpan_nd_next_hop_l2addr(uint8_t *l2addr, uint8_t *l2addr_
 #ifdef MODULE_GNRC_SIXLOWPAN_ND_ROUTER
     /* next hop determination: https://tools.ietf.org/html/rfc6775#section-6.5.4 */
     nc_entry = gnrc_ipv6_nc_get(iface, dst);
+#ifdef MODULE_FIB
+    if ((next_hop != NULL) && (nc_entry == NULL)) {
+        nc_entry = gnrc_ipv6_nc_get(fib_iface, dst);
+    }
+#endif
     /* if NCE found */
     if (nc_entry != NULL) {
         gnrc_ipv6_netif_t *ipv6_if = gnrc_ipv6_netif_get(nc_entry->iface);
         /* and interface is not 6LoWPAN */
-        if (!(ipv6_if->flags & GNRC_IPV6_NETIF_FLAGS_SIXLOWPAN) ||
+        if (!((ipv6_if == NULL) ||
+                (ipv6_if->flags & GNRC_IPV6_NETIF_FLAGS_SIXLOWPAN)) ||
                 /* or entry is registered */
-                (gnrc_ipv6_nc_get_type(nc_entry) == GNRC_IPV6_NC_TYPE_REGISTERED)) {
-        next_hop = dst;
+              (gnrc_ipv6_nc_get_type(nc_entry) == GNRC_IPV6_NC_TYPE_REGISTERED)) {
+            next_hop = dst;
         }
     }
 #endif
@@ -211,20 +210,15 @@ kernel_pid_t gnrc_sixlowpan_nd_next_hop_l2addr(uint8_t *l2addr, uint8_t *l2addr_
         }
         return iface;
     }
-    if ((nc_entry == NULL) || (!gnrc_ipv6_nc_is_reachable(nc_entry)) ||
-        (gnrc_ipv6_nc_get_type(nc_entry) == GNRC_IPV6_NC_TYPE_TENTATIVE)) {
+    if ((gnrc_ipv6_nc_get_type(nc_entry) == GNRC_IPV6_NC_TYPE_TENTATIVE)) {
         return KERNEL_PID_UNDEF;
     }
     else {
-        if (nc_entry->l2_addr_len > 0) {
-            memcpy(l2addr, nc_entry->l2_addr, nc_entry->l2_addr_len);
-        }
-        *l2addr_len = nc_entry->l2_addr_len;
         if (gnrc_ipv6_nc_get_state(nc_entry) == GNRC_IPV6_NC_STATE_STALE) {
             gnrc_ndp_internal_set_state(nc_entry, GNRC_IPV6_NC_STATE_DELAY);
         }
     }
-    return nc_entry->iface;
+    return gnrc_ipv6_nc_get_l2_addr(l2addr, l2addr_len, nc_entry);
 }
 
 void gnrc_sixlowpan_nd_rtr_sol_reschedule(gnrc_ipv6_nc_t *nce, uint32_t sec_delay)
@@ -234,8 +228,8 @@ void gnrc_sixlowpan_nd_rtr_sol_reschedule(gnrc_ipv6_nc_t *nce, uint32_t sec_dela
     gnrc_ipv6_netif_t *iface = gnrc_ipv6_netif_get(nce->iface);
     xtimer_remove(&iface->rtr_sol_timer);
     iface->rtr_sol_msg.type = GNRC_SIXLOWPAN_ND_MSG_MC_RTR_SOL;
-    iface->rtr_sol_msg.content.ptr = (char *) iface;
-    xtimer_set_msg(&iface->rtr_sol_timer, sec_delay * SEC_IN_USEC, &iface->rtr_sol_msg,
+    iface->rtr_sol_msg.content.ptr = iface;
+    xtimer_set_msg(&iface->rtr_sol_timer, sec_delay * US_PER_SEC, &iface->rtr_sol_msg,
                    gnrc_ipv6_pid);
 }
 
@@ -298,7 +292,7 @@ uint8_t gnrc_sixlowpan_nd_opt_ar_handle(kernel_pid_t iface, ipv6_hdr_t *ipv6,
                     DEBUG("6lo nd: address registration successful\n");
                     mutex_lock(&ipv6_iface->mutex);
                     /* reschedule 1 minute before lifetime expires */
-                    gnrc_ndp_internal_reset_nbr_sol_timer(nc_entry, SEC_IN_USEC * 60 *
+                    gnrc_ndp_internal_reset_nbr_sol_timer(nc_entry, US_PER_SEC * 60 *
                                                           (uint32_t)(byteorder_ntohs(ar_opt->ltime)
                                                           -1),
                                                           GNRC_NDP_MSG_NBR_SOL_RETRANS,
@@ -363,7 +357,7 @@ uint8_t gnrc_sixlowpan_nd_opt_ar_handle(kernel_pid_t iface, ipv6_hdr_t *ipv6,
                 nc_entry->flags |= GNRC_IPV6_NC_TYPE_REGISTERED;
                 reg_ltime = byteorder_ntohs(ar_opt->ltime);
                 /* TODO: notify routing protocol */
-                xtimer_set_msg(&nc_entry->type_timeout, (reg_ltime * 60 * SEC_IN_USEC),
+                xtimer_set_msg(&nc_entry->type_timeout, (reg_ltime * 60 * US_PER_SEC),
                                &nc_entry->type_timeout_msg, gnrc_ipv6_pid);
             }
             break;

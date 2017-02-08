@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2014 Freie Universität Berlin
+ * Copyright (C) 2016 Freie Universität Berlin
+ *               2016 Inria
  *
  * This file is subject to the terms and conditions of the GNU Lesser General
  * Public License v2.1. See the file LICENSE in the top level directory for more
@@ -15,11 +16,14 @@
  * @file
  * @brief           Implementation specific CPU configuration options
  *
- * @author          Hauke Petersen <hauke.peterse@fu-berlin.de>
- */
+ * @author          Hauke Petersen <hauke.petersen@fu-berlin.de>
+ * @author          Alexandre Abadie <alexandre.abadie@inria.fr>
+*/
 
-#ifndef __CPU_CONF_H
-#define __CPU_CONF_H
+#ifndef STM32F0_CPU_CONF_H
+#define STM32F0_CPU_CONF_H
+
+#include "cpu_conf_common.h"
 
 #ifdef CPU_MODEL_STM32F051R8
 #include "stm32f051x8.h"
@@ -27,7 +31,18 @@
 #ifdef CPU_MODEL_STM32F091RC
 #include "stm32f091xc.h"
 #endif
-
+#ifdef CPU_MODEL_STM32F072RB
+#include "stm32f072xb.h"
+#endif
+#ifdef CPU_MODEL_STM32F070RB
+#include "stm32f070xb.h"
+#endif
+#ifdef CPU_MODEL_STM32F030R8
+#include "stm32f030x8.h"
+#endif
+#ifdef CPU_MODEL_STM32F042K6
+#include "stm32f042x6.h"
+#endif
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,13 +56,33 @@ extern "C" {
 /** @} */
 
 /**
- * @brief Length for reading CPU_ID
+ * @brief   Flash page configuration
+ *
+ * STM32F03x, STM32F04x, STM32F05x: up to 64 pages of 1K
+ * STM32F07x, STM32F09x: up to 128 pages of 2K
+ *
+ * @{
  */
-#define CPUID_ID_LEN                    (12)
+#if defined(CPU_MODEL_STM32F091RC) || defined(CPU_MODEL_STM32F072RB)
+#define FLASHPAGE_SIZE      (2048U)
+#elif defined(CPU_MODEL_STM32F051R8) || defined(CPU_MODEL_STM32F042K6) \
+   || defined(CPU_MODEL_STM32F070RB) || defined(CPU_MODEL_STM32F030R8)
+#define FLASHPAGE_SIZE      (1024U)
+#endif
+
+#if defined(CPU_MODEL_STM32F091RC)
+#define FLASHPAGE_NUMOF     (128U)
+#elif defined(CPU_MODEL_STM32F051R8) || defined(CPU_MODEL_STM32F072RB) \
+   || defined(CPU_MODEL_STM32F030R8) || defined(CPU_MODEL_STM32F070RB)
+#define FLASHPAGE_NUMOF     (64U)
+#elif defined(CPU_MODEL_STM32F042K6)
+#define FLASHPAGE_NUMOF     (32U)
+#endif
+/** @} */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __CPU_CONF_H */
+#endif /* STM32F0_CPU_CONF_H */
 /** @} */

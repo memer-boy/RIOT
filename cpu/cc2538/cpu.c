@@ -20,6 +20,7 @@
 #include <assert.h>
 
 #include "cpu.h"
+#include "periph/init.h"
 
 #define BIT(n)          ( 1UL << (n) )
 
@@ -47,6 +48,8 @@ void cpu_init(void)
     SYS_CTRL->I_MAP = 1;
     /* initialize the clock system */
     cpu_clock_init();
+    /* trigger static peripheral initialization */
+    periph_init();
 }
 
 /**
@@ -82,7 +85,7 @@ static void cpu_clock_init(void)
 
 #if SYS_CTRL_OSC32K_USE_XTAL
     /* Wait for the 32-kHz crystal oscillator to stabilize: */
-    while ( SYS_CTRL->CLOCK_STAbits.SYNC_32K);
-    while (!SYS_CTRL->CLOCK_STAbits.SYNC_32K);
+    while ( SYS_CTRL->cc2538_sys_ctrl_clk_sta.CLOCK_STAbits.SYNC_32K);
+    while (!SYS_CTRL->cc2538_sys_ctrl_clk_sta.CLOCK_STAbits.SYNC_32K);
 #endif
 }

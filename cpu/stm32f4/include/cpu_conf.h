@@ -15,11 +15,13 @@
  * @file
  * @brief           Implementation specific CPU configuration options
  *
- * @author          Hauke Petersen <hauke.peterse@fu-berlin.de>
+ * @author          Hauke Petersen <hauke.petersen@fu-berlin.de>
  */
 
-#ifndef __CPU_CONF_H
-#define __CPU_CONF_H
+#ifndef STM32F4_CPU_CONF_H
+#define STM32F4_CPU_CONF_H
+
+#include "cpu_conf_common.h"
 
 #if defined(CPU_MODEL_STM32F401RE)
 #include "stm32f401xe.h"
@@ -27,6 +29,8 @@
 #include "stm32f407xx.h"
 #elif defined(CPU_MODEL_STM32F415RG)
 #include "stm32f415xx.h"
+#elif defined(CPU_MODEL_STM32F446RE)
+#include "stm32f446xx.h"
 #endif
 
 #ifdef __cplusplus
@@ -42,14 +46,9 @@ extern "C" {
 #define CPU_FLASH_BASE                  FLASH_BASE
 /** @} */
 
-/**
- * @brief Length for reading CPU_ID
- */
-#define CPUID_ID_LEN                    (12)
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __CPU_CONF_H */
+#endif /* STM32F4_CPU_CONF_H */
 /** @} */

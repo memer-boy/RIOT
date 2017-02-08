@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "cpu.h"
 #include "board.h"
+#include "periph/init.h"
 
 /**
  * @ingroup     cpu_k60
@@ -48,6 +49,8 @@ void cpu_init(void)
     cortexm_init();
     /* Check that we are running on the CPU that this code was built for */
     check_running_cpu_revision();
+    /* trigger static peripheral initialization */
+    periph_init();
 }
 
 static void check_running_cpu_revision(void)
@@ -64,7 +67,7 @@ static void check_running_cpu_revision(void)
          * between silicon revision 1.x and 2.x (LSB of CPUID) */
         /* If you unexpectedly end up on this line when debugging:
          * Rebuild the code using the correct value for K60_CPU_REV */
-        __ASM volatile ("bkpt #99\n");
+        __asm__ volatile ("bkpt #99\n");
 
         while (1);
     }

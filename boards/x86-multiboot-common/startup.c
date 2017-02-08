@@ -52,7 +52,7 @@ extern const multiboot_header_t multiboot_header __attribute__((section("._multi
 const multiboot_header_t multiboot_header = {
     .magic = MULTIBOOT_HEADER_MAGIC,
     .flags = MULTIBOOT_HEADER_FLAGS,
-    .checksum = MULTIBOOT_HEADER_CHECKSUM,
+    .checksum = (-(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)),
     .header_addr = (uintptr_t) &multiboot_header,
     .load_addr = (uintptr_t) &_kernel_memory_start,
     .load_end_addr = (uintptr_t) &_section_data_end,
@@ -62,12 +62,12 @@ const multiboot_header_t multiboot_header = {
 
 void __attribute__((noreturn, optimize("Os", "omit-frame-pointer"), no_instrument_function)) _start(void)
 {
-    asm volatile ("xor %ebp, %ebp");
-    asm volatile ("push %ebp");
-    asm volatile ("push %ebx");
-    asm volatile ("push %eax");
-    asm volatile ("push %ebp");
-    asm volatile ("jmp *%0" :: "r"(&startup));
+    __asm__ volatile ("xor %ebp, %ebp");
+    __asm__ volatile ("push %ebp");
+    __asm__ volatile ("push %ebx");
+    __asm__ volatile ("push %eax");
+    __asm__ volatile ("push %ebp");
+    __asm__ volatile ("jmp *%0" :: "r"(&startup));
     __builtin_unreachable();
 }
 
@@ -80,11 +80,11 @@ bool x86_get_memory_region(uint64_t *start, uint64_t *len, unsigned long *pos)
             return false;
         }
 
-        const memory_map_t *mmap = (void *)(multiboot_info->mmap_addr + *pos);
+        const multiboot_memory_map_t *mmap = (void *)(multiboot_info->mmap_addr + *pos);
         *pos += mmap->size + 4;
 
-        *start = mmap->base_addr_low + ((uint64_t) mmap->base_addr_high << 32);
-        *len = mmap->length_low + ((uint64_t) mmap->length_high << 32);
+        *start = mmap->addr;
+        *len = mmap->len;
 
         uint64_t end = *start + *len;
         printf("  %08lx%08lx - %08lx%08lx ", (long) (*start >> 32), (long) *start, (long) (end >> 32), (long) end);
@@ -112,7 +112,7 @@ static void have_a_break(void)
 {
     volatile bool cnt = false;
     while (!cnt) {
-        asm volatile ("pause");
+        __asm__ volatile ("pause");
     }
 }
 
@@ -134,7 +134,7 @@ static void __attribute__((noreturn)) startup(uint32_t multiboot_magic, const mu
         videoram_puts(" Multiboot magic is wrong \r\n");
         x86_hlt();
     }
-    else if (!(multiboot_info->flags && MULTIBOOT_INFO_FLAGS_MMAP)) {
+    else if (!(multiboot_info->flags && MULTIBOOT_INFO_MEM_MAP)) {
         videoram_puts(" Multiboot is lacking memory map information \r\n");
         x86_hlt();
     }

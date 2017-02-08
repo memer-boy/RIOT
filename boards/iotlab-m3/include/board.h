@@ -21,54 +21,24 @@
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
  */
 
-#ifndef BOARD_H_
-#define BOARD_H_
+#ifndef BOARD_H
+#define BOARD_H
 
 #include <stdint.h>
 
 #include "cpu.h"
 #include "periph_conf.h"
+#include "board_common.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @name Define the nominal CPU core clock in this board
- */
-#define F_CPU               CLOCK_CORECLOCK
-
-/**
- * @name Define the UART to be used as stdio, its baudrate, and the size of
- *       receiving ringbuffer
- * @{
- */
-#define STDIO               UART_0
-
-#ifndef STDIO_BAUDRATE
-#   define STDIO_BAUDRATE   (500000U)
-#endif
-
-#define STDIO_RX_BUFSIZE    (64U)
-/** @} */
-
-/**
- * @name Define the interface to the AT86RF231 radio
- *
- * {spi bus, spi speed, cs pin, int pin, reset pin, sleep pin}
- */
-#define AT86RF2XX_PARAMS_BOARD      {.spi = SPI_0, \
-                                     .spi_speed = SPI_SPEED_5MHZ, \
-                                     .cs_pin = GPIO_PIN(PORT_A, 4), \
-                                     .int_pin = GPIO_PIN(PORT_C, 4), \
-                                     .sleep_pin = GPIO_PIN(PORT_A, 2), \
-                                     .reset_pin = GPIO_PIN(PORT_C, 1)}
-
-/**
  * @name Define the interface for the connected flash memory
  * @{
  */
-#define EXTFLASH_SPI        SPI_1
+#define EXTFLASH_SPI        SPI_DEV(1)
 #define EXTFLASH_CS         GPIO_PIN(PORT_A,11)
 #define EXTFLASH_WRITE      GPIO_PIN(PORT_C,6)
 #define EXTFLASH_HOLD       GPIO_PIN(PORT_C,9)
@@ -112,54 +82,9 @@ extern "C" {
 #define LSM303DLHC_DRDY     GPIO_PIN(PORT_B,2)
 /** @} */
 
-/**
- * @name LED pin definitions
- * @{
- */
-#define LED_RED_PORT        (GPIOD)
-#define LED_RED_PIN         (2)
-#define LED_RED_GPIO        GPIO_PIN(PORT_D,2)
-#define LED_GREEN_PORT      (GPIOB)
-#define LED_GREEN_PIN       (5)
-#define LED_GREEN_GPIO      GPIO_PIN(PORT_B,5)
-#define LED_ORANGE_PORT     (GPIOC)
-#define LED_ORANGE_PIN      (10)
-#define LED_ORANGE_GPIO     GPIO_PIN(PORT_C,10)
-/** @} */
-
-/**
- * @name Macros for controlling the on-board LEDs.
- * @{
- */
-#define LED_RED_ON          (LED_RED_PORT->ODR &= ~(1<<LED_RED_PIN))
-#define LED_RED_OFF         (LED_RED_PORT->ODR |= (1<<LED_RED_PIN))
-#define LED_RED_TOGGLE      (LED_RED_PORT->ODR ^= (1<<LED_RED_PIN))
-
-#define LED_GREEN_ON        (LED_GREEN_PORT->ODR &= ~(1<<LED_GREEN_PIN))
-#define LED_GREEN_OFF       (LED_GREEN_PORT->ODR |= (1<<LED_GREEN_PIN))
-#define LED_GREEN_TOGGLE    (LED_GREEN_PORT->ODR ^= (1<<LED_GREEN_PIN))
-
-#define LED_ORANGE_ON       (LED_ORANGE_PORT->ODR &= ~(1<<LED_ORANGE_PIN))
-#define LED_ORANGE_OFF      (LED_ORANGE_PORT->ODR |= (1<<LED_ORANGE_PIN))
-#define LED_ORANGE_TOGGLE   (LED_ORANGE_PORT->ODR ^= (1<<LED_ORANGE_PIN))
-/** @} */
-
-/**
- * @name xtimer tuning values
- * @{
- */
-#define XTIMER_OVERHEAD     6
-#define XTIMER_SHOOT_EARLY  3
-/** @} */
-
-/**
- * @brief Initialize board specific hardware, including clock, LEDs and std-IO
- */
-void board_init(void);
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* BOARD_H_ */
+#endif /* BOARD_H */
 /** @} */

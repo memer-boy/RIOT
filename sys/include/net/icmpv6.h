@@ -20,8 +20,8 @@
  *
  * @author  Martine Lenders <mlenders@inf.fu-berlin.de>
  */
-#ifndef ICMPV6_H_
-#define ICMPV6_H_
+#ifndef ICMPV6_H
+#define ICMPV6_H
 
 #include <stdint.h>
 
@@ -38,7 +38,7 @@ extern "C" {
  *          IANA, ICMPv6 "type" Numbers
  *      </a>
  */
-#define ICMPV6_DEST_UNR     (1)     /**< Destination unreachable message */
+#define ICMPV6_DST_UNR      (1)     /**< Destination unreachable message */
 #define ICMPV6_PKT_TOO_BIG  (2)     /**< Packet Too Big message */
 #define ICMPV6_TIME_EXC     (3)     /**< Time Exceeded message */
 #define ICMPV6_PARAM_PROB   (4)     /**< Parameter Problem message */
@@ -217,9 +217,16 @@ typedef struct __attribute__((packed)) {
     network_uint16_t seq;   /**< Sequence number */
 } icmpv6_echo_t;
 
+/**
+ * @brief   Print the given ICMPv6 header to STDOUT
+ *
+ * @param[in] hdr           ICMPv6 header to print
+ */
+void icmpv6_hdr_print(icmpv6_hdr_t *hdr);
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* ICMPV6_H_ */
+#endif /* ICMPV6_H */
 /** @} */

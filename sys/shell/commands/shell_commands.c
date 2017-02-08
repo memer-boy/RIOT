@@ -102,6 +102,10 @@ extern int _ipv6_nc_routers(int argc, char **argv);
 extern int _whitelist(int argc, char **argv);
 #endif
 
+#ifdef MODULE_GNRC_IPV6_BLACKLIST
+extern int _blacklist(int argc, char **argv);
+#endif
+
 #ifdef MODULE_GNRC_ZEP
 #ifdef MODULE_IPV6_ADDR
 extern int _zep_init(int argc, char **argv);
@@ -122,6 +126,11 @@ extern int _gnrc_6ctx(int argc, char **argv);
 extern int _ccnl_open(int argc, char **argv);
 extern int _ccnl_content(int argc, char **argv);
 extern int _ccnl_interest(int argc, char **argv);
+extern int _ccnl_fib(int argc, char **argv);
+#endif
+
+#ifdef MODULE_SNTP
+extern int _ntpdate(int argc, char **argv);
 #endif
 
 const shell_command_t _shell_command_list[] = {
@@ -172,7 +181,9 @@ const shell_command_t _shell_command_list[] = {
 #endif
 #ifdef MODULE_GNRC_NETIF
     {"ifconfig", "Configure network interfaces", _netif_config},
-    {"txtsnd", "send raw data", _netif_send },
+#ifdef MODULE_GNRC_TXTSND
+    {"txtsnd", "Sends a custom string as is over the link layer", _netif_send },
+#endif
 #endif
 #ifdef MODULE_FIB
     {"fibroute", "Manipulate the FIB (info: 'fibroute [add|del]')", _fib_route_handler},
@@ -184,13 +195,16 @@ const shell_command_t _shell_command_list[] = {
 #ifdef MODULE_GNRC_IPV6_WHITELIST
     {"whitelist", "whitelists an address for receival ('whitelist [add|del|help]')", _whitelist },
 #endif
+#ifdef MODULE_GNRC_IPV6_BLACKLIST
+    {"blacklist", "blacklists an address for receival ('blacklist [add|del|help]')", _blacklist },
+#endif
 #ifdef MODULE_GNRC_ZEP
 #ifdef MODULE_IPV6_ADDR
     {"zep_init", "initializes ZEP (Zigbee Encapsulation Protocol)", _zep_init },
 #endif
 #endif
 #ifdef MODULE_GNRC_RPL
-    {"rpl", "rpl configuration tool [help|init|rm|root|show]", _gnrc_rpl },
+    {"rpl", "rpl configuration tool ('rpl help' for more information)", _gnrc_rpl },
 #endif
 #ifdef MODULE_GNRC_SIXLOWPAN_CTX
 #ifdef MODULE_GNRC_SIXLOWPAN_ND_BORDER_ROUTER
@@ -201,9 +215,13 @@ const shell_command_t _shell_command_list[] = {
     {"saul", "interact with sensors and actuators using SAUL", _saul },
 #endif
 #ifdef MODULE_CCN_LITE_UTILS
-    { "ccnl_open", "opens an interface or socket", _ccnl_open},
-    { "ccnl_int", "sends an interest", _ccnl_interest},
-    { "ccnl_cont", "create content and populated it", _ccnl_content},
+    { "ccnl_open", "opens an interface or socket", _ccnl_open },
+    { "ccnl_int", "sends an interest", _ccnl_interest },
+    { "ccnl_cont", "create content and populated it", _ccnl_content },
+    { "ccnl_fib", "shows or modifies the CCN-Lite FIB", _ccnl_fib },
+#endif
+#ifdef MODULE_SNTP
+    { "ntpdate", "synchronizes with a remote time server", _ntpdate },
 #endif
     {NULL, NULL, NULL}
 };

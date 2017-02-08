@@ -8,8 +8,8 @@
  * Parts taken from FeuerWhere-Project, lpc2387.h.
  */
 
-#ifndef __LPC2387_H
-#define __LPC2387_H
+#ifndef LPC2387_H
+#define LPC2387_H
 
 #include "lpc23xx.h"
 #include "arm7_common.h"
@@ -21,7 +21,6 @@ extern "C" {
 
 #define F_CCO                   288000000
 #define CL_CPU_DIV              4                                   ///< CPU clock divider
-#define F_CPU                   (F_CCO / CL_CPU_DIV)                ///< CPU target speed in Hz
 #define F_RC_OSCILLATOR         4000000                             ///< Frequency of internal RC oscillator
 #define F_RTC_OSCILLATOR        32767                               ///< Frequency of RTC oscillator
 
@@ -152,4 +151,4 @@ extern "C" {
 }
 #endif
 
-#endif // __LPC2387_H
+#endif /* LPC2387_H */

@@ -31,6 +31,9 @@ OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
 SEARCH_DIR(.)
 
+/* This is only used by gdb to understand where to start */
+ENTRY(reset_handler_default)
+
 /* Section Definitions */
 SECTIONS
 {
@@ -101,12 +104,23 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;
 
+    /* stack section */
+    .stack (NOLOAD):
+    {
+        . = ALIGN(8);
+        _sstack = .;
+        KEEP (*(.isr_stack))
+        . = ALIGN(8);
+        _estack = .;
+    } > ram
+
     .relocate : AT (_etext)
     {
         . = ALIGN(4);
         _srelocate = .;
         *(.ramfunc .ramfunc.*);
         *(.data .data.*);
+        KEEP (*(.openocd .openocd.*))
         . = ALIGN(4);
         _erelocate = .;
     } > ram
@@ -122,16 +136,6 @@ SECTIONS
         . = ALIGN(4);
         _ebss = . ;
         _ezero = .;
-    } > ram
-
-    /* stack section */
-    .stack (NOLOAD):
-    {
-        . = ALIGN(8);
-        _sstack = .;
-        KEEP (*(.isr_stack))
-        . = ALIGN(8);
-        _estack = .;
     } > ram
 
     /* heap section */

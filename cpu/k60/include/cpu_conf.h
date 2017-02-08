@@ -18,8 +18,10 @@
  * @author          Joakim Nohlgård <joakim.nohlgard@eistec.se>
  */
 
-#ifndef CPU_CONF_H_
-#define CPU_CONF_H_
+#ifndef CPU_CONF_H
+#define CPU_CONF_H
+
+#include "cpu_conf_common.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -68,14 +70,6 @@ extern "C"
 #define CPU_DEFAULT_IRQ_PRIO            (1U)
 #define CPU_IRQ_NUMOF                   (104U)
 #define CPU_FLASH_BASE                  (0x00000000)
-/** @} */
-
-/**
- * @name Length and address for reading CPU_ID (named UID in Freescale documents)
- * @{
- */
-#define CPUID_ID_LEN                    (16)
-#define CPUID_ID_PTR                    ((void *)(&(SIM->UIDH)))
 /** @} */
 
 /**
@@ -297,5 +291,5 @@ typedef enum llwu_wakeup_pin {
 }
 #endif
 
-#endif /* CPU_CONF_H_ */
+#endif /* CPU_CONF_H */
 /** @} */

@@ -41,8 +41,16 @@ typedef struct {
     gpio_t cs;              /**< SPI chip select pin */
     gpio_t int_pin;         /**< SPI interrupt pin */
     uint16_t rx_next_ptr;   /**< ptr to next packet whithin devices memory */
-    mutex_t mutex;          /**< mutex used to lock device access */
 } encx24j600_t;
+
+/**
+ * @brief   Struct containing the needed peripheral configuration
+ */
+typedef struct {
+    spi_t spi;              /**< SPI line */
+    gpio_t cs_pin;          /**< chip select pin */
+    gpio_t int_pin;         /**< interrupt pin */
+} encx24j600_params_t;
 
 /**
  * @brief Setup an encx24j600 based device state.
@@ -50,12 +58,10 @@ typedef struct {
  * This function sets SPI pins, initializes the device state structure.
  * It does not initialize the device itself.
  *
- * @param[out]  dev     the handle of the device to initialize
- * @param[in]   spi     SPI device the device is connected to
- * @param[in]   cs_pin  SPI chip select pin used to select the device
- * @param[in]   int_pin pin the device will trigger an interrupt on
+ * @param[out] dev     the handle of the device to initialize
+ * @param[in]  params  parameters for device initialization
  */
-void encx24j600_setup(encx24j600_t *dev, spi_t spi, gpio_t cs_pin, gpio_t int_pin);
+void encx24j600_setup(encx24j600_t *dev, const encx24j600_params_t *params);
 
 #ifdef __cplusplus
 }

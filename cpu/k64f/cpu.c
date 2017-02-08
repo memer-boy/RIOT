@@ -21,7 +21,9 @@
 
 #include <stdint.h>
 #include "cpu.h"
+#include "mcg.h"
 #include "cpu_conf.h"
+#include "periph/init.h"
 
 #define SIM_CLKDIV1_60MHZ      (SIM_CLKDIV1_OUTDIV1(0) | \
                                 SIM_CLKDIV1_OUTDIV2(0) | \
@@ -39,6 +41,8 @@ void cpu_init(void)
     cortexm_init();
     /* initialize the clock system */
     cpu_clock_init();
+    /* trigger static peripheral initialization */
+    periph_init();
 }
 
 /**

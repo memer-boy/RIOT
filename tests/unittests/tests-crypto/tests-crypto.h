@@ -16,11 +16,13 @@
  *
  * @author      Philipp Rosenkranz <philipp.rosenkranz@fu-berlin.de>
  */
-#ifndef TESTS_CRYPTO_H_
-#define TESTS_CRYPTO_H_
+#ifndef TESTS_CRYPTO_H
+#define TESTS_CRYPTO_H
+
+#include <stddef.h>
+#include <stdint.h>
 
 #include "embUnit.h"
-#include "kernel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,13 +32,6 @@ extern "C" {
  * @brief   The entry point of this test suite.
  */
 void tests_crypto(void);
-
-/**
- * @brief   Generates tests for crypto/sha256.h
- *
- * @return  embUnit tests if successful, NULL if not.
- */
-Test *tests_crypto_sha256_tests(void);
 
 /**
  * @brief   Generates tests for crypto/chacha.h
@@ -58,7 +53,6 @@ static inline int compare(uint8_t a[16], uint8_t b[16], uint8_t len)
 
 Test* tests_crypto_aes_tests(void);
 Test* tests_crypto_3des_tests(void);
-Test* tests_crypto_twofish_tests(void);
 Test* tests_crypto_cipher_tests(void);
 Test* tests_crypto_modes_ccm_tests(void);
 Test* tests_crypto_modes_ecb_tests(void);
@@ -69,5 +63,5 @@ Test* tests_crypto_modes_ctr_tests(void);
 }
 #endif
 
-#endif /* TESTS_CRYPTO_H_ */
+#endif /* TESTS_CRYPTO_H */
 /** @} */

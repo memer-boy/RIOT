@@ -27,7 +27,6 @@ extern "C" {
  * @name Define the nominal CPU core clock in this board
  * @{
  */
-#define F_CPU                           1000000
 #define CLK80                           1
 #define CLK50                           2
 #define CLK40                           3
@@ -91,6 +90,13 @@ extern "C" {
 #define UART_1_CLK          (40000000)
 #define UART_1_IRQ_CHAN     UART1_IRQn
 #define UART_1_ISR          isr_uart1
+/** @} */
+
+/**
+ * @name   ADC configuration
+ * @{
+ */
+#define ADC_NUMOF           (12)
 /** @} */
 
 #ifdef __cplusplus

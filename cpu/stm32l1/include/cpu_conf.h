@@ -18,8 +18,10 @@
  * @author          Thomas Eichinger <thomas.eichinger@fu-berlin.de>
  */
 
-#ifndef CPUCONF_H_
-#define CPUCONF_H_
+#ifndef CPUCONF_H
+#define CPUCONF_H
+
+#include "cpu_conf_common.h"
 
 #include "stm32l1xx.h"
 
@@ -36,15 +38,10 @@ extern "C" {
 #define CPU_FLASH_BASE                  FLASH_BASE
 /** @} */
 
-/**
- * @name Length for reading CPU_ID
- */
-#define CPUID_ID_LEN                      (12)
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __CPU_CONF_H */
+#endif /* CPUCONF_H */
 /** @} */
 /** @} */

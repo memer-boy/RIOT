@@ -18,8 +18,8 @@
  * @author      Fabian Nack <nack@inf.fu-berlin.de>
  */
 
-#ifndef BOARD_H_
-#define BOARD_H_
+#ifndef BOARD_H
+#define BOARD_H
 
 #include "cpu.h"
 #include "periph_conf.h"
@@ -29,15 +29,10 @@ extern "C" {
 #endif
 
 /**
- * Define the nominal CPU core clock in this board
- */
-#define F_CPU               CLOCK_CORECLOCK
-
-/**
  * @name Configure connected CC1101 (radio) device
  * @{
  */
-#define CC110X_SPI          SPI_0
+#define CC110X_SPI          SPI_DEV(0)
 #define CC110X_CS           GPIO_PIN(PORT_B, 12)
 #define CC110X_GDO0         GPIO_PIN(PORT_C, 4)
 #define CC110X_GDO1         GPIO_PIN(PORT_A, 6)
@@ -54,37 +49,29 @@ extern "C" {
 /** @} */
 
 /**
- * @name Define UART device and baudrate for stdio
+ * @brief   LED pin definitions and handlers
  * @{
  */
-#define STDIO               UART_DEV(0)
-#define STDIO_BAUDRATE      (115200U)
-#define STDIO_RX_BUFSIZE    (64U)
-/** @} */
+#define LED0_PIN            GPIO_PIN(1, 8)
+#define LED1_PIN            GPIO_PIN(1, 14)
+#define LED2_PIN            GPIO_PIN(1, 15)
 
-/**
- * @name LED pin definitions
- * @{
- */
 #define LED_PORT            GPIOB
-#define LED_RED_PIN         (1 << 8)
-#define LED_YELLOW_PIN      (1 << 14)
-#define LED_GREEN_PIN       (1 << 15)
-/** @} */
+#define LED0_MASK           (1 << 8)
+#define LED1_MASK           (1 << 14)
+#define LED2_MASK           (1 << 15)
 
-/**
- * @name Macros for controlling the on-board LEDs.
- * @{
- */
-#define LED_RED_ON          (LED_PORT->BSRRH = LED_RED_PIN)
-#define LED_RED_OFF         (LED_PORT->BSRRL = LED_RED_PIN)
-#define LED_RED_TOGGLE      (LED_PORT->ODR ^= LED_RED_PIN)
-#define LED_YELLOW_ON       (LED_PORT->BSRRH = LED_YELLOW_PIN)
-#define LED_YELLOW_OFF      (LED_PORT->BSRRL = LED_YELLOW_PIN)
-#define LED_YELLOW_TOGGLE   (LED_PORT->ODR ^= LED_YELLOW_PIN)
-#define LED_GREEN_ON        (LED_PORT->BSRRH = LED_GREEN_PIN)
-#define LED_GREEN_OFF       (LED_PORT->BSRRL = LED_GREEN_PIN)
-#define LED_GREEN_TOGGLE    (LED_PORT->ODR ^= LED_GREEN_PIN)
+#define LED0_ON             (LED_PORT->BSRRH = LED0_MASK)
+#define LED0_OFF            (LED_PORT->BSRRL = LED0_MASK)
+#define LED0_TOGGLE         (LED_PORT->ODR  ^= LED0_MASK)
+
+#define LED1_ON             (LED_PORT->BSRRH = LED1_MASK)
+#define LED1_OFF            (LED_PORT->BSRRL = LED1_MASK)
+#define LED1_TOGGLE         (LED_PORT->ODR  ^= LED1_MASK)
+
+#define LED2_ON             (LED_PORT->BSRRH = LED2_MASK)
+#define LED2_OFF            (LED_PORT->BSRRL = LED2_MASK)
+#define LED2_TOGGLE         (LED_PORT->ODR  ^= LED2_MASK)
 /** @} */
 
 /**
@@ -96,5 +83,5 @@ void board_init(void);
 }
 #endif
 
-#endif /* BOARD_H_ */
+#endif /* BOARD_H */
 /** @} */

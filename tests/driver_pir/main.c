@@ -28,11 +28,12 @@
 #include "xtimer.h"
 #include "pir.h"
 
-char pir_handler_stack[THREAD_STACKSIZE_MAIN];
-pir_t dev;
+static char pir_handler_stack[THREAD_STACKSIZE_MAIN];
+static pir_t dev;
 
 void* pir_handler(void *arg)
 {
+    (void)arg;
     msg_t msg_q[1];
     msg_init_queue(msg_q, 1);
 
